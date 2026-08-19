@@ -1,8 +1,8 @@
 {
   "name": "destiny-build",
   "displayName": "Destiny 2 Build Advisor",
-  "version": "1.0.0",
-  "description": "Evaluate Destiny 2 builds, weapon rolls and set bonuses against your own live vault, via your own d2-mcp server.",
+  "version": "1.1.0",
+  "description": "Evaluate Destiny 2 builds, weapon rolls and set bonuses against your own live vault, and apply them — gear, mods and subclass — via your own d2-mcp server.",
   "author": {
     "name": "guusvanw",
     "url": "https://github.com/guusvanw"

@@ -33,19 +33,56 @@ never reads `pluginConfigs`, so phone and iPad take their values from the
 environment variables in the cloud environment config, while laptops use the
 install prompt.
 
-**Cloud sessions also need the plugin declared in a repository**, because
-`enabledPlugins` in a user's `~/.claude/settings.json` does not travel to a
-fresh VM. Add this to the `.claude/settings.json` of any repo you open sessions
-on:
+## Web and mobile sessions: the plugin cannot install itself
+
+**This install is laptop-only, and the reason is structural rather than a
+misconfiguration.** Declaring the plugin in a repo's `.claude/settings.json`
+registers the marketplace but does **not** install it: as of Claude Code
+v2.1.195, adding a marketplace does not install a plugin that comes from an
+external source, on any path that loads plugins. So a fresh cloud container
+prints the install command and waits for a person who is not there. Three
+sessions went into configuring around this before that paragraph of the docs got
+read.
+
+**What works is a plain `.mcp.json` at the repository root.** Cloud sessions load
+project-scoped MCP servers without prompting, precisely because they cannot show
+an approval dialog:
 
 ```json
 {
-  "extraKnownMarketplaces": {
-    "destiny-tools": { "source": { "source": "github", "repo": "guusvanw/destiny-build" } }
-  },
-  "enabledPlugins": { "destiny-build@destiny-tools": true }
+  "mcpServers": {
+    "destiny2": {
+      "type": "http",
+      "url": "${D2_MCP_URL}",
+      "headers": { "Authorization": "Bearer ${D2_MCP_TOKEN}" }
+    }
+  }
 }
 ```
+
+Set `D2_MCP_URL` and `D2_MCP_TOKEN` in the cloud environment config — the same
+two values the install prompts for — and every repo carrying that file has the
+tools, from a phone included.
+
+**The plugin and `.mcp.json` are alternatives, not layers.** A laptop with both
+loads the same server twice under two names: two copies of every tool in the
+list, confusing to read and paid for in every request. Pick one per repo.
+
+### Getting the skill into a web session too
+
+`.mcp.json` gets you the tools, not the skill — that is the real trade-off. The
+skill is a single Markdown file, so vendor it rather than forking anything:
+
+```
+mkdir -p .claude/skills/destiny-build
+curl -sL https://raw.githubusercontent.com/guusvanw/destiny-build/main/plugin/skills/destiny-build/SKILL.md \
+  -o .claude/skills/destiny-build/SKILL.md
+```
+
+A repo carrying both that and the `.mcp.json` above has the full thing in a
+cloud session with no install step. Re-run the `curl` to update — and it is the
+same file the plugin ships, so nothing drifts as long as you do not edit the
+copy.
 
 ## You need your own server
 
@@ -67,10 +104,19 @@ a forked skill drifts, and the drift is silent.
 ## Writes
 
 `d2_apply` is the only tool that changes the account, and it is **dry run by
-default**. Performing a write needs `confirm=true`, `D2_ALLOW_WRITE` set on the
-server, and a Bungie app registered for *Move or equip Destiny gear*. Two things
-no API can do: **artifact perks** (set in game) and reading a write back
-immediately — Bungie takes up to ~75s to reflect it.
+default**. It equips gear, selects weapon perks, fits armour mods, and sets a
+whole subclass — super, abilities, aspects, fragments — so a recommended build
+can be run rather than assembled by hand.
+
+Performing a write needs `confirm=true`, `D2_ALLOW_WRITE` set on **your own**
+server, and a Bungie app registered for *Move or equip Destiny gear*. Those are
+two independent locks and both must be open; the refusal message names which one
+stopped you and derives your app name from the server's own environment rather
+than printing somebody else's.
+
+Two things no API can do: **artifact perks** (set in game, as is the artifact
+unlock order) and reading a write back immediately — Bungie takes up to ~75s to
+reflect it.
 
 ## Licence
 

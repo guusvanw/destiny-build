@@ -49,8 +49,9 @@ on:
 
 ## You need your own server
 
-The plugin talks to a `d2-mcp` instance holding a Bungie OAuth grant. **You
-cannot share someone else's**: Bungie rotates the refresh token on every use, so
+The plugin talks to a **[d2-mcp](https://github.com/guusvanw/d2-mcp)** instance
+holding a Bungie OAuth grant. It is a Dockerfile and a Python app, so host it
+wherever you like. **You cannot share someone else's**: Bungie rotates the refresh token on every use, so
 two clients on one grant invalidate each other within a day. Each player runs
 their own instance with their own grant, and can authorise against the same
 Bungie *application* — a registration is authorised per user.

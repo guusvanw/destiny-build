@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "destiny2": {
+      "type": "http",
+      "url": "${D2_MCP_URL:-${user_config.d2_mcp_url}}",
+      "headers": {
+        "Authorization": "Bearer ${D2_MCP_TOKEN:-${user_config.d2_mcp_token}}"
+      }
+    }
+  }
+}

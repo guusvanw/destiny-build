@@ -1,0 +1,14 @@
+{
+  "name": "destiny-tools",
+  "description": "Destiny 2 build analysis against your own live vault",
+  "owner": {
+    "name": "guusvanw",
+    "url": "https://github.com/guusvanw"
+  },
+  "plugins": [
+    {
+      "name": "destiny-build",
+      "source": "./plugin"
+    }
+  ]
+}

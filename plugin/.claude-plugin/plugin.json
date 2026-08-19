@@ -1,0 +1,34 @@
+{
+  "name": "destiny-build",
+  "displayName": "Destiny 2 Build Advisor",
+  "version": "1.0.0",
+  "description": "Evaluate Destiny 2 builds, weapon rolls and set bonuses against your own live vault, via your own d2-mcp server.",
+  "author": {
+    "name": "guusvanw",
+    "url": "https://github.com/guusvanw"
+  },
+  "repository": "https://github.com/guusvanw/destiny-build",
+  "license": "MIT",
+  "keywords": [
+    "destiny",
+    "destiny2",
+    "bungie",
+    "gaming",
+    "build"
+  ],
+  "userConfig": {
+    "d2_mcp_url": {
+      "type": "string",
+      "title": "d2-mcp server URL",
+      "description": "Your own deployment, e.g. https://your-app.fly.dev/mcp . Each player runs their own: Bungie rotates the refresh token on every use, so two clients sharing one grant invalidate each other.",
+      "required": true
+    },
+    "d2_mcp_token": {
+      "type": "string",
+      "title": "d2-mcp bearer token",
+      "description": "The D2_MCP_TOKEN shared secret guarding your endpoint. Not a Bungie credential - it only proves your client may reach your server.",
+      "sensitive": true,
+      "required": true
+    }
+  }
+}

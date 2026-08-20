@@ -1,6 +1,6 @@
 ---
 name: destiny-build
-description: Evaluate Destiny 2 builds against your live vault, and apply them - "is this build any good and can I run it", "best build for this activity", "optimise my armour for melee and super", "what mods should I run", "set my aspects and fragments", "what should I farm this week". Use whenever a Destiny build, loadout, armour set, stat spread, armour mod, subclass, super, aspect, fragment, weapon roll, set bonus, artifact perk, Xûr offering or DIM link comes up.
+description: Compose, evaluate and apply Destiny 2 builds against your live vault - "is this build any good and can I run it", "best build for this activity", "build me something for this dungeon", "optimise my armour for melee and super", "which set bonus is worth the stats", "what mods should I run", "set my aspects and fragments", "save this as a loadout", "what should I farm this week". Use whenever a Destiny build, loadout, armour set, stat spread, armour mod, subclass, super, aspect, fragment, weapon roll, set bonus, artifact perk, Xûr offering or DIM link comes up.
 ---
 
 # Destiny 2 build advice
@@ -23,32 +23,43 @@ that is how this file talks *about* them, not how you talk *to* them.
 | **`d2_build_check`** | **a whole build, scored as a SCORECARD and never a single number.** Loop closure, survivability with uptime categories, ability economy against the 70 pivot, champion coverage, damage stack, mode-aware dead weight |
 | `d2_profile` | characters, power, and **check `source` for freshness** |
 | `d2_inventory` | filter by kind / equippable / slot / **min_tier** / archetype / element / ammo. **Pages — read `truncated`, never `count`** (calibration 15) |
-| **`d2_optimize`** | **best armour sets from the live vault.** Priorities, hard stat targets, a locked exotic, and the stat mods needed to round the totals out. Use this instead of pulling the vault down and solving it here (calibrations 16 and 17) |
+| **`d2_optimize`** | **best armour sets from the live vault.** Priorities, hard stat targets, a locked exotic, and the stat mods needed to round the totals out. Also **set-bonus aware** (`require_set` / `set_aware`) and it now models the three things it used to only warn about: `fragments` stat costs, `tuning`, `assume_masterwork`. Use this instead of pulling the vault down and solving it here (calibrations 16, 17 and 18) |
 | `d2_sockets` | what is in an item's sockets and what else could be — armour mods, and a subclass's super, abilities, aspects, fragments |
 | `d2_item` | every owned copy of a named item - copies differ wildly |
 | `d2_xur` | current stock with archetypes decoded |
 | `d2_reference` | the community sheets - call bare to list ~50 tabs |
 | `d2_decode_spread` | "30 Class / 25 Weapons" → Specialist |
 | `d2_resolve` | manifest hashes → names. The bridge for DIM wishlist lines |
-| **`d2_apply`** | **the only write. Equips gear, selects perks, fits armour mods, sets a subclass. Dry run unless `confirm=true`** |
+| **`d2_apply`** | **the only write. Equips gear, selects perks, fits armour mods, sets a subclass, saves the build to an in-game loadout slot, locks and unlocks gear. Dry run unless `confirm=true`** |
 
-**A whole build can now be applied, so propose it as something to run rather
-than something to assemble by hand.** `d2_apply` takes a JSON action list,
-returns the full plan without sending anything, and performs it on a second call
-with `confirm=true`. Four ops:
+**A whole build can now be applied AND saved in game, so propose it as something
+to run rather than something to assemble by hand.** `d2_apply` takes a JSON
+action list, returns the full plan without sending anything, and performs it on a
+second call with `confirm=true`. Six ops:
 
 | op | what it writes |
 |---|---|
 | `equip` | `{"op":"equip","instance_id":...}` — transfers first if the piece is in the vault or on another character |
 | `plug` | `{"op":"plug","instance_id":...,"column":"Trait 1","plug":"Repulsor Brace"}` — a weapon perk already unlocked in its column |
-| `mod` | `{"op":"mod","instance_id":...,"mods":["Melee Font","Heavy Handed","Void Loader"]}` — armour mods, each claiming its own socket, with energy cost reported and over-capacity warned |
+| `mod` | `{"op":"mod","instance_id":...,"mods":["Melee Font","Heavy Handed","Void Loader"]}` — armour mods, each claiming its own socket, with energy cost reported and over-capacity warned. Reaches the **tuning** socket too, so `d2_optimize`'s `apply_tuning` goes straight in |
 | `loadout` | `{"op":"loadout","character_id":...,"subclass":"Prismatic","super":...,"grenade":...,"melee":...,"class_ability":...,"movement":...,"aspects":[...],"fragments":[...]}` — the whole subclass in one action. Every field optional; only what is named changes |
+| `save_loadout` | `{"op":"save_loadout","character_id":...,"loadout_index":3}` — snapshots **what is equipped** into one of the game's own loadout slots. Always planned last, because that is what it captures. `loadout_index` is required and 0-based: nothing can read which slots are occupied, so **ask which slot to overwrite** |
+| `lock` | `{"op":"lock","items":[{"instance_id":...,"state":true},...]}` (or `"op":"unlock"`) — the lock flag, batched. Locked gear cannot be dismantled. Reversible both ways, destroys nothing, transfers nothing |
 
-**So the end of a build recommendation is a `d2_apply` plan, not a shopping
-list.** The natural pipeline is `d2_optimize` → paste its `apply` list → add the
-`mod` and `loadout` actions → dry run → `confirm=true`. Live-proven for equip
-and plug 2026-08-18; the mod and loadout ops are newer, so **read the dry run
-before confirming them** rather than assuming.
+**So the end of a build recommendation is an equipped build saved to a loadout
+slot, not a shopping list — and not a DIM link either.** The natural pipeline is
+`d2_optimize` → paste its `apply` list → add the `mod`, `apply_tuning` and
+`loadout` actions → dry run → `confirm=true` → `save_loadout` into a slot the
+Guardian names. Live-proven for equip and plug 2026-08-18; **mod, loadout,
+save_loadout and lock are newer, so read the dry run before confirming them**
+rather than assuming. A DIM import URL is still worth offering **on request** —
+for sharing a build with another player — but it is no longer the deliverable.
+
+**Two things `save_loadout` cannot do, both worth saying up front:** the loadout
+**name** is a hash out of Bungie's own closed list, so free text cannot be set
+through any endpoint (DIM's included) — rename the slot in game; and there is no
+way to read which slots are already in use, so it overwrites whatever is in the
+index it is given.
 
 **When it says something "is not selectable", call `d2_sockets` before telling
 the player they do not own it.** Armour mod and subclass sockets are backed by
@@ -63,10 +74,14 @@ its own writes. What this means for you: if a fragment is refused while aspects
 are still pending in the same plan, apply the plan and dry-run the rest again —
 do not conclude the fragment is unowned.
 
-**Three things it cannot do**, all worth saying rather than silently omitting:
+**Four things it cannot do**, all worth saying rather than silently omitting:
 **artifact perks have no write endpoint anywhere** (set in game), the artifact
-unlock order likewise, and a confirmed write takes up to ~75s to become readable
-(calibration 14).
+unlock order likewise, **kill trackers** cannot be selected through the API
+either (the socket is hidden and its options usually cannot even be enumerated —
+two clicks in game), and a confirmed write takes up to ~75s to become readable
+(calibration 14). Masterworking and infusion are also in-game only. **Say the
+manual list out loud at the end of a build** — an unmentioned artifact column is
+the difference between a build that works and one that half-works.
 
 The server is **hosted**, so these tools work the same from a laptop and from a
 phone session. **Each player runs their own instance and holds their own Bungie
@@ -304,6 +319,55 @@ fine in a browser.
    magnitudes; it does **not** document the flat stat mods, so read those off the
    vault (`d2_sockets`) rather than looking for a source that covers them.
 
+18. **Tuning, fragment costs and masterworking are inputs now — pass them, and
+   respect which of them can be aimed.** `d2_optimize` used to only *name* these
+   three in `totals_explained`; it models them on request, and they are not
+   interchangeable. **Fragment stat costs** (`fragments=[...]`, or
+   `stat_offsets={...}`) are permanent, aimed and usually **negative** — the one
+   contributor that can turn a met target unmet, so pass the fragments chosen in
+   step 5 before quoting a stat line. **Tuning** (`tuning=true`) trades ±5 in its
+   own socket on every piece, costs no energy, and is off by default because it is
+   the only lever that can *lower* a stat; it closes the gap the five flat mods
+   cannot, and it takes the 5 from a stat with no floor. **Masterworking**
+   (`assume_masterwork=true`) is ~+30 **spread** and is added to no total, ever —
+   it cannot be pointed at the stat that is short, so it does not rescue a stat
+   that is short because of archetype scarcity (calibration 2). Read
+   `totals_explained`: it is written per call and says which of these are inside
+   the totals and which are still outside them.
+
+19. **Set bonuses are a search dimension, so stop choosing between "the set" and
+   "the stats" by hand.** `require_set={"Exodus Down":4}` enforces the piece count
+   *during* the search and returns **`set_bonus_cost`** — the base stats given up
+   against the best unconstrained set. `set_aware=true` annotates every returned
+   set with its active **2pc and 4pc** (a four-piece arms both), each carrying the
+   compendium magnitude *and* the Aegis rank. So "40% damage resist or eighteen
+   base stats" is one call and two numbers. **Then it is the Guardian's call** —
+   the tool quantifies the trade and does not settle it. Two traps ride along:
+   membership is read from item **names**, so `d2_optimize` and DIM can disagree
+   with the set-bonus socket, which is a hidden display listing every bonus in the
+   game; and set names diverge from armour names (calibration 5), so an unmatched
+   set reports candidates rather than "no bonus".
+
+20. **Verb-graph provenance beats memory, and the two review states are not the
+   same claim.** Every edge in `d2_synergy` carries the compendium row it was read
+   from and a `review` field. **Quote magnitudes from `reviewed` edges; treat
+   `lexicon` ones as a lead to verify**, and say which you are doing. A remembered
+   mechanic that contradicts the graph is wrong until the row says otherwise — and
+   if the row *is* wrong, that is a two-minute fix in the JSON, not a reason to
+   argue from memory. An empty answer is not a negative one: read the reply's
+   `note` and `domain`, which distinguish "the game has no such thing" from "that
+   domain has not been extracted yet".
+
+21. **The scorecard is arithmetic; the trade-offs are the Guardian's.**
+   `d2_build_check` returns sections and no single number **on purpose** — one
+   would hide exactly the uptime-against-magnitude and stat-against-stat calls
+   that produced every good correction in this project. So do not invent a score,
+   do not average the sections, and do not quote an uptime percentage the tool
+   deliberately refuses to invent (it gives a *category*: passive / loop /
+   on-demand / conditional). Read the sections, say which way you lean and why,
+   and leave the choice where it belongs. Same rule for the two answers in a
+   composition: **show the ceiling and the ownable build, always both.**
+
 ## This Guardian's preferences are NOT in here — they are in `d2_context`
 
 **Deliberate split (2026-08-18).** This file holds what is true for *any*
@@ -353,25 +417,83 @@ a Font only where something is still short and the player's charge economy
 supports it (calibration 17). **End with an applied build, not a shopping list:**
 offer the `d2_apply` dry run — the optimiser's own `apply` list and
 `apply_stat_mods`, plus the `mod` and `loadout` actions for the utility mods and
-subclass the spec calls for. A DIM import URL
-(`app.destinyitemmanager.com/loadouts?loadout=<urlencoded JSON>`) is still worth
-giving alongside it, because it *saves* the loadout for re-equipping later, which
-`d2_apply` does not.
+subclass the spec calls for — and finish with `save_loadout` into a slot they
+name, so the build is re-equippable in game with one button. **The DIM import URL
+(`app.destinyitemmanager.com/loadouts?loadout=<urlencoded JSON>`) is no longer
+part of this** — it used to be the only way to *save* a loadout and the game's own
+slots now do that. Offer it on request, for sharing a build with another player,
+and note that it cannot carry the artifact column.
 
-**"Best build for this activity?"** **Establish the play mode first** (solo /
-duo / matchmade — see above); it changes which perks even count, and
-`d2_build_check` cannot score dead weight without it. Then pull the activity
-profile (`d2_synergy(activity=...)`) for the champions and the resist elements,
-and score candidates with `d2_build_check`. Rank by fit **and** ownability —
-show both, they're different answers.
+**"Best build for this activity?"** This is the composition question, and it has
+a pipeline — see the next section. The two things that decide the answer before
+any of it runs: **the play mode** (solo / duo / matchmade), because it changes
+which perks even count and `d2_build_check` cannot score dead weight without it;
+and **the activity**, because `d2_synergy(activity=...)` names the champions and
+the incoming damage elements that pick the resist mods.
 
-*The full composition method — seeds, loop closure, greedy fragments, the
-inverse-gap weapon fill — is not in this file yet. Until it is, compose by hand
-against `resources/destiny-2-buildcrafting.md`'s pipeline and use `d2_synergy` to
-prune and `d2_build_check` to verify each candidate.*
+**"What should I farm?"** Derive it, don't list it: compose the build **twice**
+(below), and the difference between the best possible and the best ownable *is*
+the farm list. Rank each missing piece by how much scorecard it buys, and filter
+to what is obtainable now — Xûr, featured dungeon, and re-acquiring an owned
+model at tier 5 (calibration 9).
 
-**"What should I farm?"** Missing items across S-tier builds, ranked by how many
-builds each unlocks, filtered to what's obtainable now (Xûr, featured dungeon).
+## Composing a build
+
+**The eleven steps, each routed to the thing that answers it.** Work them in
+order: every step's output is the next step's input, and skipping to stats is how
+a build ends up with last week's mods under this week's subclass.
+
+| # | Step | Who answers it |
+|---|---|---|
+| 0 | **Read the Guardian** | `d2_context` — play style, roll priority, standing decisions, sourced findings |
+| 1 | **Mode + activity** | ask for the mode; `d2_synergy(activity=...)` for the profile — damage elements, champion types, encounter shape, and the role in a raid |
+| 2 | **Offer directions** | **you and the Guardian, before any deep dive** — see below |
+| 3 | **Enumerate seeds** | owned exotics × subclasses, pruned by `d2_synergy(seed=...)`: it says which subclasses can close a seed's loop *at all*, and which cannot and why. Cap the shortlist at ~5 |
+| 4 | **Close the loop** | the seed's `consumes` edges are its hard requirements; pick aspects and abilities that *provide* those verbs. `d2_synergy(id=...)` for the full text, never the name |
+| 5 | **Fragments + artifact** | greedy select-then-improve over the graph; allow **back-propagation** — an artifact perk can justify changing a weapon element chosen earlier. Fragments carry stat costs; carry them into step 7 |
+| 6 | **Weapons** | inverse-gap fill: whatever the seed is best at, the weapons cover the opposite. Prefer weapons that *feed abilities*. Wishlist-grade them, then **pin the copy by `instance_id`** via `d2_item` — copies differ, and the copy trap is real |
+| 7 | **Set bonus + stats** | `d2_optimize` with `set_aware=true` (or `require_set` when the bonus is the point), `lock` the exotic, `fragments=[...]` from step 5, and **70-pivot floors as `targets`** rather than reflex 100s |
+| 8 | **Mods** | orb-and-charge economy templates; surge over font for damage; **chest resists named from the activity profile's element mix**, not from habit |
+| 9 | **Verify** | `d2_build_check` per candidate, then `d2_meta` as an **outside view** — never as the decider (popularity is not correctness: Exodus Down ranks #2/S at 4% population) |
+| 10 | **Deliver** | 1–2 candidates with their trade-offs → the Guardian picks → `d2_apply` equip + `mod`/`apply_tuning` + `loadout` + **`save_loadout`** → then the manual checklist: **artifact column, masterworking, infusion, kill tracker** |
+
+### Step 2 is a menu, not a build
+
+**Open with directions and let the Guardian steer.** One line each, all cheap to
+produce, then *one* of them gets the full pipeline:
+
+* **the meta pick** — what clears this activity (`d2_meta`)
+* **the preference-fit pick** — what their own notes point at (`d2_context`)
+* **a curveball** — something that changes the way the activity plays
+* **the theoretical ceiling** — the best that exists, ownership ignored
+
+Composing all four is a waste of everyone's time and reads as an oracle handing
+down an answer. Four lines and a question is a conversation.
+
+### "Theoretically best" is two answers, and the gap is the farm list
+
+Within the chosen direction, compute the optimum **twice** and show both:
+
+* **Best possible** — ownership ignored. The true ceiling for this class, mode and
+  activity. The sandbox is frozen, so this answer does not expire.
+* **Best ownable now** — every component checked against the live vault
+  (`d2_inventory` / `d2_optimize` / `d2_item`), never against memory.
+
+**Always show both.** The delta is the only honest answer to "what am I giving
+up", and it doubles as the farm list — ranked by how much scorecard each missing
+piece buys. Showing only the ownable one hides the ceiling; showing only the
+ceiling recommends gear nobody has.
+
+### Version-skew guard
+
+**If a tool named above is not in the tool list, this skill is newer than the
+deployment.** Fall back to the manual method — `d2_reference` on the subclass
+tabs for mechanics, the pipeline above by hand — and **say that is what you are
+doing**. Same for the `d2_apply` ops: if `save_loadout` is refused as an unknown
+op, deliver the equipped build and say the in-game save has to be done by hand.
+The skill and the server version independently; a skill describing a tool the
+deployment lacks still reads perfectly well, which is exactly why it has to be
+said out loud rather than worked around silently.
 
 ## Keeping the context current is part of the job
 

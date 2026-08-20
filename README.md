@@ -35,6 +35,8 @@ install prompt.
 
 ## Web and mobile sessions: the plugin cannot install itself
 
+**Agent-followable version of this section: [docs/cloud-setup.md](docs/cloud-setup.md)** — fetchable raw at `https://raw.githubusercontent.com/guusvanw/destiny-build/main/docs/cloud-setup.md`.
+
 **This install is laptop-only, and the reason is structural rather than a
 misconfiguration.** Declaring the plugin in a repo's `.claude/settings.json`
 registers the marketplace but does **not** install it: as of Claude Code

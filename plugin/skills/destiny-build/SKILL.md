@@ -23,10 +23,10 @@ that is how this file talks *about* them, not how you talk *to* them.
 | **`d2_build_check`** | **a whole build, scored as a SCORECARD and never a single number.** Loop closure, survivability with uptime categories, ability economy against the 70 pivot, champion coverage, damage stack, mode-aware dead weight |
 | `d2_profile` | characters, power, and **check `source` for freshness** |
 | `d2_inventory` | filter by kind / equippable / slot / **min_tier** / archetype / element / ammo. **Pages — read `truncated`, never `count`** (calibration 15) |
-| **`d2_optimize`** | **best armour sets from the live vault.** Priorities, hard stat targets, a locked exotic, and the stat mods needed to round the totals out. Also **set-bonus aware** (`require_set` / `set_aware`) and it now models the three things it used to only warn about: `fragments` stat costs, `tuning`, `assume_masterwork`. Use this instead of pulling the vault down and solving it here (calibrations 16, 17 and 18) |
+| **`d2_optimize`** | **best armour sets from the live vault.** Priorities, hard stat targets, a locked exotic, and the stat mods needed to round the totals out. Also **set-bonus aware** — `set_aware` is **on by default**, so every answer names the active 2pc/4pc with its magnitude and Aegis rank; `require_set` when the bonus is the point — and it now models the three things it used to only warn about: `fragments` stat costs, `tuning`, `assume_masterwork`. Use this instead of pulling the vault down and solving it here (calibrations 16, 17 and 18) |
 | `d2_sockets` | what is in an item's sockets and what else could be — armour mods, and a subclass's super, abilities, aspects, fragments |
 | `d2_item` | every owned copy of a named item - copies differ wildly |
-| **`d2_triage`** | **per-copy vault verdict CANDIDATES with reasons** — keep / ambiguous / discard-candidate, scored on what each column can *reach* against a DIM wishlist (weapons) or Pareto relevance within slot × archetype × set (armour). Reports lock state; changes nothing |
+| **`d2_triage`** | **per-copy vault verdict CANDIDATES with reasons** — keep / ambiguous / discard-candidate, scored on what each column can *reach* against a DIM wishlist (weapons) or Pareto relevance within slot × archetype × set (armour). Reports lock state; changes nothing. **Terse by default** (verdict + one line); `detail=true` for the full reasons, aimed at the copies that matter |
 | `d2_xur` | current stock with archetypes decoded |
 | `d2_reference` | the community sheets - call bare to list ~50 tabs |
 | `d2_decode_spread` | "30 Class / 25 Weapons" → Specialist |
@@ -44,7 +44,7 @@ second call with `confirm=true`. Six ops:
 | `plug` | `{"op":"plug","instance_id":...,"column":"Trait 1","plug":"Repulsor Brace"}` — a weapon perk already unlocked in its column |
 | `mod` | `{"op":"mod","instance_id":...,"mods":["Melee Font","Heavy Handed","Void Loader"]}` — armour mods, each claiming its own socket, with energy cost reported and over-capacity warned. Reaches the **tuning** socket too, so `d2_optimize`'s `apply_tuning` goes straight in |
 | `loadout` | `{"op":"loadout","character_id":...,"subclass":"Prismatic","super":...,"grenade":...,"melee":...,"class_ability":...,"movement":...,"aspects":[...],"fragments":[...]}` — the whole subclass in one action. Every field optional; only what is named changes |
-| `save_loadout` | `{"op":"save_loadout","character_id":...,"loadout_index":3}` — snapshots **what is equipped** into one of the game's own loadout slots. Always planned last, because that is what it captures. `loadout_index` is required and 0-based: nothing can read which slots are occupied, so **ask which slot to overwrite** |
+| `save_loadout` | `{"op":"save_loadout","character_id":...,"name":"Dungeon","icon":4,"title":"Duo invis"}` — snapshots **what is equipped** into one of the game's own loadout slots. Always planned last, because that is what it captures. `loadout_index` is **optional**: omitted, it takes the lowest empty slot. See *Saving to a loadout slot* below |
 | `lock` | `{"op":"lock","items":[{"instance_id":...,"state":true},...]}` (or `"op":"unlock"`) — the lock flag, batched. Locked gear cannot be dismantled. Reversible both ways, destroys nothing, transfers nothing |
 
 **So the end of a build recommendation is an equipped build saved to a loadout
@@ -56,11 +56,41 @@ save_loadout and lock are newer, so read the dry run before confirming them**
 rather than assuming. A DIM import URL is still worth offering **on request** —
 for sharing a build with another player — but it is no longer the deliverable.
 
-**Two things `save_loadout` cannot do, both worth saying up front:** the loadout
-**name** is a hash out of Bungie's own closed list, so free text cannot be set
-through any endpoint (DIM's included) — rename the slot in game; and there is no
-way to read which slots are already in use, so it overwrites whatever is in the
-index it is given.
+### Saving to a loadout slot
+
+**Show the slots before you save into one.** Every `save_loadout` dry run
+carries `loadout_slots` — one row per in-game slot with a status:
+
+| status | what to do |
+|---|---|
+| `empty` | save into it. This is what an omitted `loadout_index` picks |
+| `saved-by-skill` | ours and unchanged — name the title and date, then replace it if they say so |
+| `changed-in-game` | ours, but they have edited it since. **Say so and get an explicit yes** — their edit is what gets lost |
+| `unknown` | occupied by something this skill never saved. **Contents unknown from here.** Say that, and ask before overwriting |
+| `unreadable` | occupancy could not be read. Ask them to check in game |
+
+**Never overwrite `unknown` or `changed-in-game` without naming the warning and
+getting their choice.** With every slot full and no index given the call refuses
+and hands back the overview — that refusal is correct, so bring them the list
+rather than picking for them.
+
+**The name is Bungie's, and it is settable.** One of 22 words — Alpha…Epsilon,
+PvE, PvP, the six elements, Support, Vanguard, Crucible, Gambit, Raid, Dungeon,
+Trials, Nightfall, Strike. Icons and colours have **no names at all**, so they
+take an index (icons 0-20, colours 0-21) or a hash. A word off the list is
+refused with the whole list attached — pick from it rather than passing
+`allow_unresolved`.
+
+**Give every save a `title`** (and a `description` where it earns one). That is
+ours, not Bungie's, kept server-side, and it is the only thing that later
+distinguishes two slots both called `Dungeon`. **After saving, tell them the
+slot, the in-game name/icon/colour, and the title recorded** — otherwise the
+in-game slot and their memory of it drift apart immediately.
+
+`d2_context(action="read")` carries the same registry as `saved_loadouts`, so
+"which slot is the duo build" is answerable without a save in flight. Do not
+trust a status read within ~75s of a confirmed write; the profile lags
+(calibration 14) and a fresh save reads as `changed-in-game`.
 
 **When it says something "is not selectable", call `d2_sockets` before telling
 the player they do not own it.** Armour mod and subclass sockets are backed by
@@ -82,7 +112,9 @@ either (the socket is hidden and its options usually cannot even be enumerated �
 two clicks in game), and a confirmed write takes up to ~75s to become readable
 (calibration 14). Masterworking and infusion are also in-game only. **Say the
 manual list out loud at the end of a build** — an unmentioned artifact column is
-the difference between a build that works and one that half-works.
+the difference between a build that works and one that half-works. The tracker
+half of that list has a standing rule of its own: see *Scenario-specific
+weapons*.
 
 The server is **hosted**, so these tools work the same from a laptop and from a
 phone session. **Each player runs their own instance and holds their own Bungie
@@ -339,10 +371,14 @@ fine in a browser.
 19. **Set bonuses are a search dimension, so stop choosing between "the set" and
    "the stats" by hand.** `require_set={"Exodus Down":4}` enforces the piece count
    *during* the search and returns **`set_bonus_cost`** — the base stats given up
-   against the best unconstrained set. `set_aware=true` annotates every returned
-   set with its active **2pc and 4pc** (a four-piece arms both), each carrying the
-   compendium magnitude *and* the Aegis rank. So "40% damage resist or eighteen
-   base stats" is one call and two numbers. **Then it is the Guardian's call** —
+   against the best unconstrained set. `set_aware` is **on by default** and
+   annotates every returned set with its active **2pc and 4pc** (a four-piece arms
+   both), each carrying the compendium magnitude *and* the Aegis rank. So "40%
+   damage resist or eighteen base stats" is one call and two numbers, without
+   asking for it. Read the reply's own words on an absent annotation:
+   `set_bonuses_note` distinguishes "no two pieces of one set, so nothing is
+   armed" from "the datasets are not staged on this deployment" — the first is an
+   answer, the second is not. **Then it is the Guardian's call** —
    the tool quantifies the trade and does not settle it. Two traps ride along:
    membership is read from item **names**, so `d2_optimize` and DIM can disagree
    with the set-bonus socket, which is a hidden display listing every bonus in the
@@ -453,10 +489,37 @@ a build ends up with last week's mods under this week's subclass.
 | 4 | **Close the loop** | the seed's `consumes` edges are its hard requirements; pick aspects and abilities that *provide* those verbs. `d2_synergy(id=...)` for the full text, never the name |
 | 5 | **Fragments + artifact** | greedy select-then-improve over the graph; allow **back-propagation** — an artifact perk can justify changing a weapon element chosen earlier. Fragments carry stat costs; carry them into step 7 |
 | 6 | **Weapons** | inverse-gap fill: whatever the seed is best at, the weapons cover the opposite. Prefer weapons that *feed abilities*. Wishlist-grade them, then **pin the copy by `instance_id`** via `d2_item` — copies differ, and the copy trap is real |
-| 7 | **Set bonus + stats** | `d2_optimize` with `set_aware=true` (or `require_set` when the bonus is the point), `lock` the exotic, `fragments=[...]` from step 5, and **70-pivot floors as `targets`** rather than reflex 100s |
+| 7 | **Set bonus + stats** | `d2_optimize` — set-aware by default, `require_set` when the bonus is the point — `lock` the exotic, `fragments=[...]` from step 5, and **70-pivot floors as `targets`** rather than reflex 100s |
 | 8 | **Mods** | orb-and-charge economy templates; surge over font for damage; **chest resists named from the activity profile's element mix**, not from habit |
 | 9 | **Verify** | `d2_build_check` per candidate, then `d2_meta` as an **outside view** — never as the decider (popularity is not correctness: Exodus Down ranks #2/S at 4% population) |
-| 10 | **Deliver** | 1–2 candidates with their trade-offs → the Guardian picks → `d2_apply` equip + `mod`/`apply_tuning` + `loadout` + **`save_loadout`** → then the manual checklist: **artifact column, masterworking, infusion, kill tracker** |
+| 10 | **Deliver** | 1–2 candidates with their trade-offs → the Guardian picks → `d2_apply` equip + `mod`/`apply_tuning` + `loadout` + **`save_loadout`** with a `title` and a slot they chose off the overview → report the slot, name and title back → then the manual checklist: **artifact column, masterworking, infusion, kill tracker** (both sections below) |
+
+### Scenario-specific weapons: spell the perks out, and set the tracker
+
+**Standing behaviour, in delivery and in triage alike.** A weapon whose selected
+roll is the **PvP** roll gets both of these, every time — and it applies whether
+or not a PvE sibling copy exists, because the copy has to be identifiable on its
+own:
+
+1. **The complete description of the selected PvP perks** — each perk named, with
+   what it actually does, from `d2_reference` or `d2_synergy`. **Never from
+   memory.** A perk name without its effect is not a recommendation, and this is
+   the roll they will be told to keep.
+2. **"Set the CRUCIBLE kill tracker on this copy in game."** Say it as an
+   instruction, not a suggestion. The tracker is what makes the copy's intended
+   use visible in the vault — otherwise two copies of one model are
+   indistinguishable at a glance and the wrong one gets taken into a raid.
+
+**Symmetrically for PvE where it disambiguates:** two copies of one model split
+PvE/PvP, or a PvE roll kept alongside a PvP one — suggest the **Vanguard**
+tracker on the PvE copy. On a model with only one copy and no scenario split,
+skip it; a tracker that distinguishes nothing is noise.
+
+**Trackers are manual, and the reason is worth stating plainly:** the tracker
+socket is hidden to the server, so its options often cannot be enumerated at all
+and there is no `tracker` op. Two clicks in game. It joins the rest of the manual
+checklist — **artifact column, masterworking, infusion** — and like those, it
+only gets done if you say it out loud.
 
 ### Step 2 is a menu, not a build
 
@@ -496,6 +559,13 @@ The skill and the server version independently; a skill describing a tool the
 deployment lacks still reads perfectly well, which is exactly why it has to be
 said out loud rather than worked around silently.
 
+**Same for fields rather than tools.** If a `save_loadout` dry run comes back
+with no `loadout_slots`, that deployment cannot read the slots — so ask which
+slot to overwrite and pass an explicit `loadout_index`, exactly as before, and say
+that is why. If a `name` is refused as unsettable free text rather than resolved,
+the deployment predates the identifier lists: drop the name and say the slot has
+to be renamed in game.
+
 ## Vault triage — lock what stays, unlock what goes
 
 **The verdicts get written into the game, and that is what makes this safe.**
@@ -511,7 +581,10 @@ game — never yours, and there is no API that could do it anyway.**
    `summary` counts the whole pool, so quoting a page as a total is the
    calibration-15 failure wearing a hat. **Start with a strict wishlist**: a loose
    list flags half a large vault as a keep and the exercise stops meaning
-   anything.
+   anything. Rows are **terse by default** — a verdict and one line each, which
+   is what makes a several-hundred-copy sweep readable. Re-call with
+   `detail=true`, narrowed to the copies a decision turns on, for the full
+   reasons; do not pull detail over the whole vault.
 2. **Scenario awareness, not per-model dedupe.** One model can hold distinct god
    rolls for distinct jobs — PvE and PvP, add-clear and DPS — and **one copy per
    scenario is a keep, not a duplicate.** Armour likewise: two copies of one piece
@@ -544,15 +617,21 @@ game — never yours, and there is no API that could do it anyway.**
    god roll it has not selected comes back with `select_perks` and a ready-made
    `apply` list of `plug` actions — **that is free, it is the largest finding this
    ever produced** (64 copies at once, measured), and it is two clicks per weapon
-   otherwise. Kill trackers cannot be set through the API, so if the Guardian
-   wants the PvE copy showing Vanguard kills and the PvP copy Guardian kills, say
-   it is an in-game step and say which copy is which.
+   otherwise. Then apply the tracker rule from *Scenario-specific weapons* above,
+   which holds for kept copies exactly as it does for recommended ones: for any
+   keep whose selected roll is the **PvP** roll, spell out **what each selected
+   perk does** (from `d2_reference` / `d2_synergy`, never memory) and tell them to
+   **set the CRUCIBLE kill tracker on that copy** — sibling copy or not. Vanguard
+   on the PvE copy where the split needs disambiguating. Trackers are manual
+   because the socket is hidden to the server; say that rather than leaving it
+   looking like an omission.
 
 **What triage must never do:** turn a verdict candidate into a verdict. The rows
 are arithmetic plus reasons; every reversal in this project's record came from a
-reason arithmetic cannot weigh. Read `reasons`, bring the ambiguous ones to the
-Guardian, and never pass a `discard → unlock` batch through without them seeing
-the names.
+reason arithmetic cannot weigh. So read the reasoning — the one-line `reason` to
+sort the pile, then `detail=true` on anything you are about to act on — bring the
+ambiguous ones to the Guardian, and never pass a `discard → unlock` batch through
+without them seeing the names.
 
 ## Keeping the context current is part of the job
 
@@ -592,6 +671,12 @@ The sections, roughly in order of how often they get re-derived:
 **Never write the vault into it.** It goes stale the moment something drops, and
 `d2_inventory` is live and cheap. The context file is for judgment; the API is
 for facts.
+
+**And never write saved loadouts into it either.** A read already carries
+`saved_loadouts` — which slots hold which build, with their status — kept in its
+own store and written by `save_loadout` itself. Copying that into a section would
+be the vault rule all over again: a record that looks authoritative and is stale
+the moment they edit a slot in game.
 
 **Distill, do not append.** The file is capped at ~32 KB and a write past that is
 refused with exactly that instruction. Fold old entries into the standing

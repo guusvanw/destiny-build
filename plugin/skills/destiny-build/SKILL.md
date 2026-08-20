@@ -1,6 +1,6 @@
 ---
 name: destiny-build
-description: Compose, evaluate and apply Destiny 2 builds against your live vault - "is this build any good and can I run it", "best build for this activity", "build me something for this dungeon", "optimise my armour for melee and super", "which set bonus is worth the stats", "what mods should I run", "set my aspects and fragments", "save this as a loadout", "what should I farm this week". Use whenever a Destiny build, loadout, armour set, stat spread, armour mod, subclass, super, aspect, fragment, weapon roll, set bonus, artifact perk, Xûr offering or DIM link comes up.
+description: Compose, evaluate and apply Destiny 2 builds against your live vault, and triage the vault itself - "is this build any good and can I run it", "best build for this activity", "build me something for this dungeon", "optimise my armour for melee and super", "which set bonus is worth the stats", "what mods should I run", "set my aspects and fragments", "save this as a loadout", "what can I dismantle", "which of these copies do I keep", "what should I farm this week". Use whenever a Destiny build, loadout, armour set, stat spread, armour mod, subclass, super, aspect, fragment, weapon roll, set bonus, artifact perk, vault cull, Xûr offering or DIM link comes up.
 ---
 
 # Destiny 2 build advice
@@ -26,6 +26,7 @@ that is how this file talks *about* them, not how you talk *to* them.
 | **`d2_optimize`** | **best armour sets from the live vault.** Priorities, hard stat targets, a locked exotic, and the stat mods needed to round the totals out. Also **set-bonus aware** (`require_set` / `set_aware`) and it now models the three things it used to only warn about: `fragments` stat costs, `tuning`, `assume_masterwork`. Use this instead of pulling the vault down and solving it here (calibrations 16, 17 and 18) |
 | `d2_sockets` | what is in an item's sockets and what else could be — armour mods, and a subclass's super, abilities, aspects, fragments |
 | `d2_item` | every owned copy of a named item - copies differ wildly |
+| **`d2_triage`** | **per-copy vault verdict CANDIDATES with reasons** — keep / ambiguous / discard-candidate, scored on what each column can *reach* against a DIM wishlist (weapons) or Pareto relevance within slot × archetype × set (armour). Reports lock state; changes nothing |
 | `d2_xur` | current stock with archetypes decoded |
 | `d2_reference` | the community sheets - call bare to list ~50 tabs |
 | `d2_decode_spread` | "30 Class / 25 Weapons" → Specialist |
@@ -494,6 +495,64 @@ op, deliver the equipped build and say the in-game save has to be done by hand.
 The skill and the server version independently; a skill describing a tool the
 deployment lacks still reads perfectly well, which is exactly why it has to be
 said out loud rather than worked around silently.
+
+## Vault triage — lock what stays, unlock what goes
+
+**The verdicts get written into the game, and that is what makes this safe.**
+Locked gear cannot be dismantled, so `keep → lock` and `discard → unlock` turn a
+list of opinions into a state the game enforces. Afterwards the Guardian sorts by
+lock state and dismantles the unlocked pile. **The dismantle is always theirs, in
+game — never yours, and there is no API that could do it anyway.**
+
+**Six steps:**
+
+1. **Sweep.** `d2_triage(kind="weapons", wishlist="MR…_PPC…")` and
+   `d2_triage(kind="armor")`. **Honour `truncated`** — page the rows; the
+   `summary` counts the whole pool, so quoting a page as a total is the
+   calibration-15 failure wearing a hat. **Start with a strict wishlist**: a loose
+   list flags half a large vault as a keep and the exercise stops meaning
+   anything.
+2. **Scenario awareness, not per-model dedupe.** One model can hold distinct god
+   rolls for distinct jobs — PvE and PvP, add-clear and DPS — and **one copy per
+   scenario is a keep, not a duplicate.** Armour likewise: two copies of one piece
+   with **different archetypes** serve different builds, because the archetype
+   fixes the primary and secondary stat. Archetype is identity, never noise. The
+   only duplicates the scoring recognises are copies whose *reachable* perks are
+   identical.
+3. **Experimental keeps — judgment past the shopping list.** Where a combination
+   is absent from the lists but `d2_synergy` shows a real loop closing (the
+   Destabilizing Rounds + Repulsor Brace shape, which reversed two hand-made
+   verdicts), **keep it — flagged `experimental`, and always saying why.**
+   Compendium-grounded reasoning outranks list absence, and **list absence alone
+   is never a discard reason** (calibration 10).
+4. **Guardian rules come from `d2_context`, not from defaults.** Standing ones
+   worth checking for: exotic weapons out of scope (`d2_triage` excludes them by
+   default), a copy parked on a character is *their* call — it is usually a
+   loadout that works without a vault transfer — and **an item they locked by hand
+   is intent.** The plan never unlocks those silently; list them separately for an
+   explicit decision. `d2_triage` reports lock state, and `d2_apply`'s reply
+   repeats it under `currently_locked`; nothing anywhere records *who* locked
+   something, which is exactly why it is treated as a decision.
+5. **Four buckets, then ONE dry run.** *keep → lock* (reason attached) ·
+   *experimental keep → lock* (why it is worth trying) · *discard → unlock*
+   (reason attached) · *ask* (genuinely ambiguous — the Guardian decides in
+   conversation). Then one `d2_apply` `lock` action carrying the whole batch, read
+   the dry run, then `confirm=true`. Locking is reversible in both directions and
+   destroys nothing, so the risk here is the *unlock* half of the list — read that
+   half twice.
+6. **Make the keeps self-explanatory in game.** Every kept weapon that holds a
+   god roll it has not selected comes back with `select_perks` and a ready-made
+   `apply` list of `plug` actions — **that is free, it is the largest finding this
+   ever produced** (64 copies at once, measured), and it is two clicks per weapon
+   otherwise. Kill trackers cannot be set through the API, so if the Guardian
+   wants the PvE copy showing Vanguard kills and the PvP copy Guardian kills, say
+   it is an in-game step and say which copy is which.
+
+**What triage must never do:** turn a verdict candidate into a verdict. The rows
+are arithmetic plus reasons; every reversal in this project's record came from a
+reason arithmetic cannot weigh. Read `reasons`, bring the ambiguous ones to the
+Guardian, and never pass a `discard → unlock` batch through without them seeing
+the names.
 
 ## Keeping the context current is part of the job
 

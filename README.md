@@ -91,7 +91,13 @@ holding a Bungie OAuth grant. It is a Dockerfile and a Python app, so host it
 wherever you like. **You cannot share someone else's**: Bungie rotates the refresh token on every use, so
 two clients on one grant invalidate each other within a day. Each player runs
 their own instance with their own grant, and can authorise against the same
-Bungie *application* — a registration is authorised per user.
+Bungie *application* — a registration is authorised per user, so a second player
+does not register anything; only the grant differs.
+
+**Register that application for read AND write** — *Read your Destiny 2
+information* plus *Move or equip Destiny gear*. Equipping a build, fitting its
+mods, saving it to a loadout slot and locking what a vault cull keeps are all
+writes, and a read-only registration mints tokens that refuse them.
 
 ## The skill is impersonal on purpose
 
@@ -117,19 +123,28 @@ for anything beyond skill prose.
 ## Writes
 
 `d2_apply` is the only tool that changes the account, and it is **dry run by
-default**. It equips gear, selects weapon perks, fits armour mods, and sets a
-whole subclass — super, abilities, aspects, fragments — so a recommended build
-can be run rather than assembled by hand.
+default**. It equips gear, selects weapon perks, fits armour mods and tuning,
+sets a whole subclass — super, abilities, aspects, fragments — **saves the result
+into one of the game's own loadout slots**, and sets the lock flag a vault cull
+runs on. So a recommended build can be run *and kept* rather than assembled by
+hand, and DIM is not needed to save one.
 
-Performing a write needs `confirm=true`, `D2_ALLOW_WRITE` set on **your own**
-server, and a Bungie app registered for *Move or equip Destiny gear*. Those are
-two independent locks and both must be open; the refusal message names which one
-stopped you and derives your app name from the server's own environment rather
-than printing somebody else's.
+Performing a write needs `confirm=true` per action — that is the real gate, and
+the plan is always shown first — plus `D2_ALLOW_WRITE` on **your own** server,
+which is a kill switch for freezing every write at once rather than a per-feature
+opt-in. Underneath both sits the Bungie side: your **grant** has to have been
+minted while the app registration carried *Move or equip Destiny gear*. Widening
+the app afterwards does not widen an existing token, and nothing can read a
+token's scope back, so the first write either works or fails `NotAuthorized` —
+and the cheapest way to find out is reversible: lock one item, then unlock it.
+The refusal message names which lock stopped you and derives your app name from
+the server's own environment rather than printing somebody else's.
 
-Two things no API can do: **artifact perks** (set in game, as is the artifact
-unlock order) and reading a write back immediately — Bungie takes up to ~75s to
-reflect it.
+Four things no API can do, and a build recommendation should name them rather
+than trailing off: **artifact perks** (set in game, as is the artifact unlock
+order), **masterworking and infusion**, **kill trackers** (the socket is hidden
+and its options usually cannot even be enumerated, so it is two clicks in game),
+and reading a write back immediately — Bungie takes up to ~75s to reflect it.
 
 ## Licence
 

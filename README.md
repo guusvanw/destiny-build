@@ -101,6 +101,19 @@ priority, play style or vault, and it asks you to record your own as they come
 up. That is what lets several people install the same copy without forking it —
 a forked skill drifts, and the drift is silent.
 
+## Working on the skill itself
+
+The skill and the server **version independently**. That is deliberate — they
+live in separate repos so a public plugin does not drag a private deployment's
+Fly config and OAuth notes along with it — and the standing cost is that a skill
+can happily describe a tool the deployment does not have. So when a change
+alters a tool's contract, change the skill's calibrations in the same pass.
+
+The server lives at [guusvanw/d2-mcp](https://github.com/guusvanw/d2-mcp), and
+its `HANDOFF.md` carries the implementation orientation: current state, a code
+map, and the traps that have actually cost time. Start there rather than here
+for anything beyond skill prose.
+
 ## Writes
 
 `d2_apply` is the only tool that changes the account, and it is **dry run by

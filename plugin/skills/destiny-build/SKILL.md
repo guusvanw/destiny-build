@@ -263,16 +263,22 @@ fine in a browser.
    add a Font to a stat total** — say what it grants and what it depends on, and
    check the player's activity mix before leaning on one.
 
-   **And quote the socket cost, always.** A set has ~15 mod sockets and they are
-   the same ones Siphons, Kickstarts and resists come out of, so stat mods are
-   not free real estate; `mod_sockets.left_for_utility` is what a build actually
-   has to spend. A `mod_cost_warning` means the set only reaches its targets by
-   spending more than one socket per piece — that is "possible on paper", not a
-   build, and better gear in one slot is usually the real answer. Two more
+   **And quote the socket cost, always.** A five-piece set has **20 mod sockets**
+   — four per piece — and they are the same ones Siphons, Kickstarts and resists
+   come out of, so stat mods are not free real estate;
+   `mod_sockets.left_for_utility` is what a build actually has to spend.
+
+   But **only one socket per piece can hold a flat stat mod** — the general
+   socket, the only one that offers them; the other three offer the Fonts. So
+   five is the whole stat-mod budget on a set, no matter what `stat_mod_slots`
+   asks for, and a bigger request comes back capped in `notes`. When a target
+   needs more than that, the honest answer is `meets_targets: false` with an
+   `unreachable` ceiling — better gear in one slot, not more mods. Two more
    contributors are *not* in any total and are worth naming when a set lands just
-   short: **tuning** (±5 traded between two stats) and **masterworking** (~+30
-   across a set, spread rather than aimed, so it does not rescue a stat that is
-   short because of archetype scarcity — see calibration 2).
+   short: **tuning** (±5 traded between two stats, in its own socket on every
+   piece) and **masterworking** (~+30 across a set, spread rather than aimed, so
+   it does not rescue a stat that is short because of archetype scarcity — see
+   calibration 2).
 
    The Data Compendium's `armor-mods` tab documents the Fonts and their
    magnitudes; it does **not** document the flat stat mods, so read those off the

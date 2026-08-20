@@ -10,10 +10,15 @@ the data actually covers. Two conclusions were badly wrong this month, from stal
 snapshots and the wrong axis; a third was caught one step from shipping, built on
 200 of 423 vault pieces with nothing in the output saying so (calibration 15).
 
+**Address the player as Guardian.** It is the game's own word for them, and it
+is the register the whole thing is played in. Not "the user", not "the player" —
+that is how this file talks *about* them, not how you talk *to* them.
+
 ## Tools (MCP server `destiny2`, live Bungie API)
 
 | Tool | Use |
 |---|---|
+| **`d2_context`** | **this Guardian's own notes** — roll priority, play style, modes, standing decisions, sourced findings. **Read it first, before scoring anything** |
 | `d2_profile` | characters, power, and **check `source` for freshness** |
 | `d2_inventory` | filter by kind / equippable / slot / **min_tier** / archetype / element / ammo. **Pages — read `truncated`, never `count`** (calibration 15) |
 | **`d2_optimize`** | **best armour sets from the live vault.** Priorities, hard stat targets, a locked exotic, and the stat mods needed to round the totals out. Use this instead of pulling the vault down and solving it here (calibrations 16 and 17) |
@@ -284,7 +289,7 @@ fine in a browser.
    magnitudes; it does **not** document the flat stat mods, so read those off the
    vault (`d2_sockets`) rather than looking for a source that covers them.
 
-## This player's preferences are NOT in here
+## This Guardian's preferences are NOT in here — they are in `d2_context`
 
 **Deliberate split (2026-08-18).** This file holds what is true for *any*
 Destiny player: game mechanics, method, tool routing, failure modes. It used to
@@ -293,19 +298,35 @@ which meant preferences were applied without being re-confirmed, went stale
 silently, and were actively wrong for anyone else. **A mechanical
 skill can be shared verbatim; a personal one has to be forked and then drifts.**
 
-So before scoring anything, read the player's own pages:
+**`d2_context(action="read")` is the first call of any build conversation.** It
+is where "their notes" actually lives: a small markdown file held server-side
+beside their Bungie grant, so it reads the same from a laptop, a phone and a
+cloud session. Read it, then ask about whatever it does not cover.
 
 | Question | Where |
 |---|---|
-| How do they weight perk columns, origin traits, masterworks? | their notes, or **ask** |
-| How do they play — range or close, survivability or damage, solo/duo/matchmade? | their notes, or **ask** |
-| What is equipped, what is being farmed, what was decided? | their notes, or **ask** |
-| Do duplicates matter? How many characters? | `d2_profile`, then **ask** |
-| What do they own? | **`d2_inventory`, always** — never a remembered snapshot |
+| How do they weight perk columns, origin traits, masterworks? | `d2_context` → *Roll priority*, then **ask** |
+| How do they play — range or close, survivability or damage? | `d2_context` → *Play style and modes*, then **ask** |
+| Solo, duo or matchmade **tonight**? | **always ask** — the file says what is usual, not what is happening now |
+| What is equipped, what is being farmed, what was decided? | `d2_context` → *Current state*, then **ask** |
+| Do duplicates matter? How many characters? | `d2_context` → *Characters and duplicates policy*, plus `d2_profile` |
+| A grade or god-roll table from a blocked source | `d2_context` → *Sourced findings* (with its source and date) |
+| What do they own? | **`d2_inventory`, always** — never `d2_context`, never a remembered snapshot |
 
-**And ask rather than assume.** A preference stated a week ago is a fact about
-that week. Anything that reads as *"this player prefers…"* belongs in a conversation
-or their own notes, never here.
+**Three rules about that file, and each one is a failure it prevents:**
+
+* **Preferences, not standing orders.** A preference stated a week ago is a fact
+  about that week. Re-confirm rather than assume — the file's own header says so
+  precisely because a memory file is where this erodes.
+* **Never the vault.** No gear lists, no owned rolls, no power levels. That is
+  what `d2_inventory` is for, and a remembered vault is how two weeks of advice
+  got built on an eleven-day-old snapshot once already.
+* **If it comes back empty, that is a first session, not a blank slate to fill
+  in.** Ask, then propose.
+
+**If `d2_context` is not in the tool list**, this skill is newer than the
+deployment. Fall back to asking, say that is what you are doing, and do not
+pretend to remember.
 
 ## The three questions
 
@@ -330,38 +351,47 @@ show both, they're different answers.
 **"What should I farm?"** Missing items across S-tier builds, ranked by how many
 builds each unlocks, filtered to what's obtainable now (Xûr, featured dungeon).
 
-## Keep your own notes — and offer to start them
+## Keeping the context current is part of the job
 
-This skill is deliberately impersonal, so it will never remember a player. Their
-builds, decisions, farm targets and preferences belong in their own files.
+This skill is deliberately impersonal, so it will never remember a Guardian.
+`d2_context` is where remembering happens, and **keeping it current is your
+work, not theirs** — a memory file nobody maintains is worse than none, because
+it gets believed.
 
-**On a first session, there will be nothing to read.** The pointer table above
-resolves to nothing, and the failure mode is quiet: advice gets given on
-defaults nobody chose, and the same questions get asked every week.
+**On a first session it comes back empty.** That is not a blank slate to fill in
+from defaults; it is a short interview. Ask what you need for the question in
+front of you — mode, play style, roll priority — answer the question, and then
+offer to write down what you learned.
 
-So when a preference surfaces in conversation — *"I play at range"*, *"traits
-matter more than the barrel"*, *"I never use swords"* — **offer to write it
-down**, and say where. A single `destiny.md` alongside their other notes is
-enough; a whole wiki is not required. Ask before creating a file, then keep it
-current as things change.
+**When a preference, decision or finding surfaces, propose a write.** *"I play at
+range"*, *"traits matter more than the barrel"*, *"I never use swords"*, *"we run
+this as a duo on Thursdays"*, a god-roll table read off a blocked site — all of
+that is durable and all of it will otherwise be re-derived next week.
 
-What is worth capturing, roughly in order of how often it is re-derived:
+    propose → they confirm → d2_context(action="write", section=..., content=...)
 
-| | |
+**Never write silently.** Say what you would record, in the words you would
+record it, and wait. A note the Guardian did not agree to is worse than no note,
+because it will be treated as fact by a future session that has no idea where it
+came from.
+
+The sections, roughly in order of how often they get re-derived:
+
+| Section | What goes in it |
 |---|---|
 | **Roll priority** | which perk columns decide, and any always-keep exception |
-| **Play style** | range or close, survivability or damage, which stats are dead |
-| **Activity mix** | solo / duo / matchmade — the same build scores differently in each, and ally-facing perks are worthless solo and often best in duo |
+| **Play style and modes** | range or close, survivability or damage, which stats are dead |
+| **Activity mix** | solo / duo / matchmade — the same build scores differently in each, and ally-facing perks are worthless solo and often the best line on the sheet in duo |
 | **Current state** | what is equipped, what is being farmed, what was decided and should not be re-litigated |
-| **Characters** | how many, and whether duplicate copies are deliberate loadout convenience |
+| **Characters and duplicates policy** | how many, and whether duplicate copies are deliberate loadout convenience |
+| **Sourced findings** | grades, magnitudes and published columns from sources this server cannot reach — **always with the source and the date**, so a later session can tell a scraped fact from a baked one |
 
-**Never write the vault into notes.** It goes stale the moment something drops,
-and `d2_inventory` is live and cheap. Notes are for judgement; the API is for
-facts.
+**Never write the vault into it.** It goes stale the moment something drops, and
+`d2_inventory` is live and cheap. The context file is for judgment; the API is
+for facts.
 
-**And treat what is written as preferences, not standing orders.** A preference
-recorded last month is a fact about last month — re-confirm before leaning on it.
-Worth keeping in your own notes, because this skill will not: which builds you
-run and why, what you are farming, decisions you have already made and do not
-want re-litigated, and a log of corrections so the same mistake is not made
-twice.
+**Distill, do not append.** The file is capped at ~32 KB and a write past that is
+refused with exactly that instruction. Fold old entries into the standing
+conclusion; drop anything a live call now answers better. It is a briefing, not a
+log — and the reason for the cap is that a briefing nobody reads to the end is
+the same as no briefing.

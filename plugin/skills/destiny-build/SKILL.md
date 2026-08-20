@@ -19,6 +19,8 @@ that is how this file talks *about* them, not how you talk *to* them.
 | Tool | Use |
 |---|---|
 | **`d2_context`** | **this Guardian's own notes** — roll priority, play style, modes, standing decisions, sourced findings. **Read it first, before scoring anything** |
+| **`d2_synergy`** | **what provides or consumes a game verb**, compiled from the Data Compendium: "what cloaks an ally on Void Hunter", "what consumes scorch", every edge of one exotic with the row it was read from. `seed=` prunes: which subclasses can close a given exotic's loop at all. `activity=` returns the activity profile instead — incoming damage elements as **named** chest resist mods, champion types, encounter shape |
+| **`d2_build_check`** | **a whole build, scored as a SCORECARD and never a single number.** Loop closure, survivability with uptime categories, ability economy against the 70 pivot, champion coverage, damage stack, mode-aware dead weight |
 | `d2_profile` | characters, power, and **check `source` for freshness** |
 | `d2_inventory` | filter by kind / equippable / slot / **min_tier** / archetype / element / ammo. **Pages — read `truncated`, never `count`** (calibration 15) |
 | **`d2_optimize`** | **best armour sets from the live vault.** Priorities, hard stat targets, a locked exotic, and the stat mods needed to round the totals out. Use this instead of pulling the vault down and solving it here (calibrations 16 and 17) |
@@ -105,6 +107,19 @@ Vetted 2026-08-16, extended 2026-08-18.
 invisible" — only *while Vanishing Step is also equipped*. That conditional cost
 a wrong recommendation that survived a commit. Same lesson as calibration 3, for
 abilities: get the **conditions**, not just the reputation.
+
+**That reading is now compiled** — `d2_synergy` holds the conditions, magnitudes
+and requirements for every aspect, fragment, exotic, set bonus, artifact perk and
+mod, each with the compendium row it came from, and `d2_build_check` runs the
+whole build against them. Ask it before quoting a mechanic from memory: it knows
+that Trapper's Ambush needs Vanishing Step, that Kindling Trigger is dead inside
+a Well of Radiance, and that Torch does nothing in a DPS phase. Two fields decide
+whether to trust an answer: **`review`** (`reviewed` means a human read the row;
+`lexicon` means a machine guessed and nobody checked) and the reply's **`note`**
+on an empty answer, which distinguishes "the game has no such thing" from "that
+domain has not been read yet". *If these tools are not in the tool list, this
+skill is newer than the deployment: fall back to `d2_reference` on the subclass
+tabs and say that is what you are doing.*
 
 **God rolls are a solved problem now — install the wishlist.**
 `charlesxcaliber/DIMAegisWeaponWishlist` is generated from Aegis's own sheet and
@@ -344,9 +359,16 @@ giving alongside it, because it *saves* the loadout for re-equipping later, whic
 `d2_apply` does not.
 
 **"Best build for this activity?"** **Establish the play mode first** (solo /
-duo / matchmade — see above); it changes which perks even count. Then match the
-activity profile against build properties. Rank by fit **and** ownability -
+duo / matchmade — see above); it changes which perks even count, and
+`d2_build_check` cannot score dead weight without it. Then pull the activity
+profile (`d2_synergy(activity=...)`) for the champions and the resist elements,
+and score candidates with `d2_build_check`. Rank by fit **and** ownability —
 show both, they're different answers.
+
+*The full composition method — seeds, loop closure, greedy fragments, the
+inverse-gap weapon fill — is not in this file yet. Until it is, compose by hand
+against `resources/destiny-2-buildcrafting.md`'s pipeline and use `d2_synergy` to
+prune and `d2_build_check` to verify each candidate.*
 
 **"What should I farm?"** Missing items across S-tier builds, ranked by how many
 builds each unlocks, filtered to what's obtainable now (Xûr, featured dungeon).

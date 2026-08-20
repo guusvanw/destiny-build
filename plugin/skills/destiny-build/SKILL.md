@@ -16,7 +16,7 @@ snapshots and the wrong axis; a third was caught one step from shipping, built o
 |---|---|
 | `d2_profile` | characters, power, and **check `source` for freshness** |
 | `d2_inventory` | filter by kind / equippable / slot / **min_tier** / archetype / element / ammo. **Pages — read `truncated`, never `count`** (calibration 15) |
-| **`d2_optimize`** | **best armour sets from the live vault.** Priorities, hard stat targets, a locked exotic. Use this instead of pulling the vault down and solving it here (calibration 16) |
+| **`d2_optimize`** | **best armour sets from the live vault.** Priorities, hard stat targets, a locked exotic, and the stat mods needed to round the totals out. Use this instead of pulling the vault down and solving it here (calibrations 16 and 17) |
 | `d2_sockets` | what is in an item's sockets and what else could be — armour mods, and a subclass's super, abilities, aspects, fragments |
 | `d2_item` | every owned copy of a named item - copies differ wildly |
 | `d2_xur` | current stock with archetypes decoded |
@@ -252,6 +252,32 @@ fine in a browser.
    *(For contrast, DIM's optimizer silently clamps an impossible minimum instead
    of refusing it, which is why a DIM result can violate your own floor.)*
 
+17. **Stat mods and Fonts both round out a build's stats, and conflating them is
+   a claim about how someone plays.** Flat **stat mods** are permanent —
+   `Melee Mod` +10, `Minor Melee Mod` +4, and those exact names go straight into
+   `d2_apply`. **Fonts** grant far more — `+20 | +40 | +50` by mod tier for 3
+   energy — but **only while Armor Charge is active**, so a Font is the best mod
+   on the piece in a build running the charge economy and worthless in one that
+   is not. `d2_optimize` therefore *adds* stat mods (only ever to close a target
+   gap) and only *offers* Fonts, under `fonts`, for a stat still short. **Do not
+   add a Font to a stat total** — say what it grants and what it depends on, and
+   check the player's activity mix before leaning on one.
+
+   **And quote the socket cost, always.** A set has ~15 mod sockets and they are
+   the same ones Siphons, Kickstarts and resists come out of, so stat mods are
+   not free real estate; `mod_sockets.left_for_utility` is what a build actually
+   has to spend. A `mod_cost_warning` means the set only reaches its targets by
+   spending more than one socket per piece — that is "possible on paper", not a
+   build, and better gear in one slot is usually the real answer. Two more
+   contributors are *not* in any total and are worth naming when a set lands just
+   short: **tuning** (±5 traded between two stats) and **masterworking** (~+30
+   across a set, spread rather than aimed, so it does not rescue a stat that is
+   short because of archetype scarcity — see calibration 2).
+
+   The Data Compendium's `armor-mods` tab documents the Fonts and their
+   magnitudes; it does **not** document the flat stat mods, so read those off the
+   vault (`d2_sockets`) rather than looking for a source that covers them.
+
 ## This player's preferences are NOT in here
 
 **Deliberate split (2026-08-18).** This file holds what is true for *any*
@@ -280,9 +306,12 @@ or their own notes, never here.
 **"Is this build good, can I run it?"** Parse to a spec → score components via
 `d2_reference` → **armour via `d2_optimize`, not by hand** (lock the exotic the
 spec names) → diff the rest against `d2_inventory` → report gaps, substitutes,
-farm routes. **End with an applied build, not a shopping list:** offer the
-`d2_apply` dry run — the optimiser's own `apply` list, plus the `mod` and
-`loadout` actions for the mods and subclass the spec calls for. A DIM import URL
+farm routes. **Round the stats out** with the optimiser's `stat_mods`, and offer
+a Font only where something is still short and the player's charge economy
+supports it (calibration 17). **End with an applied build, not a shopping list:**
+offer the `d2_apply` dry run — the optimiser's own `apply` list and
+`apply_stat_mods`, plus the `mod` and `loadout` actions for the utility mods and
+subclass the spec calls for. A DIM import URL
 (`app.destinyitemmanager.com/loadouts?loadout=<urlencoded JSON>`) is still worth
 giving alongside it, because it *saves* the loadout for re-equipping later, which
 `d2_apply` does not.

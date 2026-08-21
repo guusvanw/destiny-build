@@ -47,9 +47,9 @@ that is how this file talks *about* them, not how you talk *to* them.
 |---|---|
 | **`d2_context`** | **this Guardian's own notes** — roll priority, play style, modes, standing decisions, sourced findings. **Read it first, before scoring anything** |
 | **`d2_synergy`** | **what provides or consumes a game verb**, compiled from the Data Compendium: "what cloaks an ally on Void Hunter", "what consumes scorch", every edge of one exotic with the row it was read from. `seed=` prunes: which subclasses can close a given exotic's loop at all. `activity=` returns the activity profile instead — incoming damage elements as **named** chest resist mods, champion types, encounter shape |
-| **`d2_build_check`** | **a whole build, scored as a SCORECARD and never a single number.** Loop closure, survivability with uptime categories, ability economy against the 70 pivot, champion coverage, damage stack, mode-aware dead weight |
+| **`d2_build_check`** | **a whole build, scored as a SCORECARD and never a single number.** Loop closure, survivability with uptime categories, ability economy against the 70 pivot, champion coverage, damage stack, mode-aware dead weight. Plus **`artifact_check`** against the live account: is the stated artifact the one equipped, is each named perk even a perk of it, is it slotted |
 | `d2_profile` | characters, power, and **check `source` for freshness**. Also **`currencies`** — glimmer *and* the upgrade materials (cores, prisms, ascendant shards and alloys), so a masterwork or enhance recommendation quotes the cost **and** the balance instead of spending blind |
-| **`d2_progress`** | **"what should I farm this week", and the artifact.** A bare call is a **summary** — the artifact, the *outstanding* milestones, this week's modifiers, the currencies — and it names what it left out under `sections_omitted`, so ask for `section="ranks"` / `"milestones"` / `"week"` / `"artifact"` rather than assuming a missing section is empty. `section="rotation"` is **this week's activity modifiers per difficulty tier** — surges, threats, overcharged weapons, champion and shield types, banes. Also the **seasonal artifact**: what is *unlocked* against what is *slotted*. See *This week's modifiers* below |
+| **`d2_progress`** | **"what should I farm this week", and the artifact.** A bare call is a **summary** — the artifact, the *outstanding* milestones, this week's modifiers, the currencies — and it names what it left out under `sections_omitted`, so ask for `section="ranks"` / `"milestones"` / `"week"` / `"artifact"` rather than assuming a missing section is empty. `section="rotation"` is **this week's activity modifiers per difficulty tier** — surges, threats, overcharged weapons, champion and shield types, banes. Also the **seasonal artifact**: **which one is equipped** and what is *slotted* in its eight sockets. See *This week's modifiers* below |
 | **`d2_records`** | **triumphs and seals by name**, with live objective progress in Bungie's own wording. "How close am I to solo flawless" is one call. `seal="…"` for title progress |
 | **`d2_collections`** | **"have I ever had this?"** Acquired or not, plus the source string. `names=[…]` is a bulk mode — though `d2_triage` now joins this itself on its discard half, so reach for it for the question asked outside a sweep. Read the caveat in *Vault triage* before letting an "acquired" become a dismantle |
 | **`d2_vendors`** | **any vendor's stock by name** — Banshee-44, Ada-1, Rahool, Saint-14. Costs, rarity, and for armour the archetype decode. `d2_xur` stays the better call for Xûr |
@@ -146,8 +146,8 @@ are still pending in the same plan, apply the plan and dry-run the rest again �
 do not conclude the fragment is unowned.
 
 **Four things it cannot do**, all worth saying rather than silently omitting:
-**artifact perks have no write endpoint anywhere** (set in game), the artifact
-unlock order likewise, **kill trackers** cannot be selected through the API
+**artifact perks have no write endpoint anywhere** (slotted in game), which
+artifact is equipped likewise, **kill trackers** cannot be selected through the API
 either (the socket is hidden and its options usually cannot even be enumerated —
 two clicks in game), and a confirmed write takes up to ~75s to become readable
 (calibration 14). Masterworking and infusion are also in-game only. **Say the
@@ -157,14 +157,29 @@ half of that list has a standing rule of its own: see *Scenario-specific
 weapons*.
 
 **But the artifact column is now READABLE, so check it instead of asking.**
-`d2_progress(section="artifact")` reports, per character, what is **unlocked**
-(the perk grid) and what is **slotted** (the artifact's eight sockets), plus
-`unlocked_not_slotted` and `empty_slots`. So the honest instruction goes from
-"remember to set your artifact perks" to **"Void Infestation is unlocked and not
-slotted, and you have a free socket — that is one menu"**, which is a different
-sentence and a much more useful one. Writing them is still impossible; knowing
-is not. Where the two live sources disagree the reply says so under
-`crosscheck_note` — pass that on rather than picking a side.
+`d2_progress(section="artifact")` reports, per character, **which artifact is
+equipped**, what is **slotted** in its eight sockets, `not_slotted` (the rest of
+that artifact's own perks) and `empty_slots` — and `d2_build_check` runs the same
+check against a build's stated `artifact_perks` for you. So the honest
+instruction goes from "remember to set your artifact perks" to **"Void
+Infestation is not slotted and you have a free socket — that is one menu"**,
+which is a different sentence and a much more useful one.
+
+**Two rules about artifact state, and both are load-bearing:**
+
+* **Every artifact perk is unlocked** (final sandbox, owner-verified in game
+  2026-08-21, on all seven artifacts). There is nothing to buy and no unlock
+  order, so *slotted or not* is the only question. Never tell a Guardian to
+  "unlock" a perk.
+* **Which artifact is equipped comes first.** There are seven equippable
+  artifacts and a perk name only exists on some of them, so a build written for
+  Heresy's Tablet of Ruin cannot run while the Renegades artifact is on — and
+  that mismatch, not any individual perk, is the finding to lead with.
+  `d2_build_check` reports it as a blocking warning and then skips the per-perk
+  check, because comparing perk names across two artifacts compares different
+  perks. Component 202's perk grid is **legacy**: it gates nothing and it
+  describes the *current season's* artifact, so never read a perk's absence from
+  it as unavailability.
 
 The server is **hosted**, so these tools work the same from a laptop and from a
 phone session. **Each player runs their own instance and holds their own Bungie
@@ -590,8 +605,8 @@ a build ends up with last week's mods under this week's subclass.
 | 6 | **Weapons** | inverse-gap fill: whatever the seed is best at, the weapons cover the opposite. Prefer weapons that *feed abilities*. Wishlist-grade them, then **pin the copy by `instance_id`** via `d2_item` — copies differ, and the copy trap is real |
 | 7 | **Set bonus + stats** | `d2_optimize` — set-aware by default, `require_set` when the bonus is the point — `lock` the exotic, `fragments=[...]` from step 5, and **70-pivot floors as `targets`** rather than reflex 100s |
 | 8 | **Mods** | orb-and-charge economy templates; surge over font for damage; **chest resists named from the activity profile's element mix**, not from habit — and cross-checked against **this week's threat element** from step 1 |
-| 9 | **Verify** | `d2_build_check` per candidate, then `d2_meta` as an **outside view** — never as the decider (popularity is not correctness: Exodus Down ranks #2/S at 4% population). **Check the artifact column** with `d2_progress(section="artifact")` rather than trusting the spec, and quote any material cost against `d2_profile` → `currencies` |
-| 10 | **Deliver** | 1–2 candidates with their trade-offs → the Guardian picks → `d2_apply` equip + `mod`/`apply_tuning` + `loadout` + **`save_loadout`** with a `title` and a slot they chose off the overview → report the slot, name and title back → then the manual checklist: **artifact column** (now naming which perks are unlocked-but-not-slotted rather than just reminding them), **masterworking, infusion, kill tracker** (both sections below) |
+| 9 | **Verify** | `d2_build_check` per candidate, then `d2_meta` as an **outside view** — never as the decider (popularity is not correctness: Exodus Down ranks #2/S at 4% population). **the artifact column is checked for you** — `d2_build_check` compares the stated artifact against the equipped one and each stated perk against the slotted set, so read `artifact_check` rather than trusting the spec — and quote any material cost against `d2_profile` → `currencies` |
+| 10 | **Deliver** | 1–2 candidates with their trade-offs → the Guardian picks → `d2_apply` equip + `mod`/`apply_tuning` + `loadout` + **`save_loadout`** with a `title` and a slot they chose off the overview → report the slot, name and title back → then the manual checklist: **artifact column** (naming which perks are not slotted, and the artifact to equip if it is the wrong one — never "unlock", they all are), **masterworking, infusion, kill tracker** (both sections below) |
 
 ### Scenario-specific weapons: spell the perks out, and set the tracker
 

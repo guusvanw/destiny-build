@@ -1,7 +1,10 @@
 # destiny-build
 
 A Claude Code plugin for Destiny 2 build advice, answered against **your own
-live vault** rather than from memory.
+live account** rather than from memory — the vault, and since **2.1.0** also
+progression and weekly milestone state, **this week's activity modifiers per
+difficulty tier**, the seasonal artifact, triumphs and seals, Collections, any
+vendor's stock and your own clear history.
 
 It ships the build-advice skill and the MCP connection to a `d2-mcp` server.
 **You need your own deployment** — see below.
@@ -127,9 +130,15 @@ for anything beyond skill prose.
 `d2_apply` is the only tool that changes the account, and it is **dry run by
 default**. It equips gear, selects weapon perks, fits armour mods and tuning,
 sets a whole subclass — super, abilities, aspects, fragments — **saves the result
-into one of the game's own loadout slots**, and sets the lock flag a vault cull
-runs on. So a recommended build can be run *and kept* rather than assembled by
-hand, and DIM is not needed to save one.
+into one of the game's own loadout slots**, sets the lock flag a vault cull runs
+on, and **pulls gear out of the postmaster**. So a recommended build can be run
+*and kept* rather than assembled by hand, and DIM is not needed to save one.
+
+`pull_postmaster` behaves slightly differently from the rest and both
+differences are deliberate: a **bare call is a listing**, so asking for it shows
+every character's Lost Items bucket and pulls nothing; and a failure does **not**
+stop the batch, because the usual failure is one full destination bucket while
+the bucket everything else is sitting in *evicts*. Failures come back per row.
 
 Performing a write needs `confirm=true` per action — that is the real gate, and
 the plan is always shown first — plus `D2_ALLOW_WRITE` on **your own** server,
@@ -147,6 +156,12 @@ than trailing off: **artifact perks** (set in game, as is the artifact unlock
 order), **masterworking and infusion**, **kill trackers** (the socket is hidden
 and its options usually cannot even be enumerated, so it is two clicks in game),
 and reading a write back immediately — Bungie takes up to ~75s to reflect it.
+
+**Artifact perks are unwritable but no longer unreadable.** Since 2.1.0
+`d2_progress(section="artifact")` reports, per character, which perks are
+*unlocked* and which are *slotted*, so the manual step comes with the specifics
+instead of a reminder — "this one is unlocked, not slotted, and you have a free
+socket" rather than "don't forget your artifact".
 
 ## Licence
 

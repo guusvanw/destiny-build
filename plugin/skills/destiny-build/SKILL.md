@@ -1,6 +1,6 @@
 ---
 name: destiny-build
-description: Compose, evaluate and apply Destiny 2 builds against your live vault, and triage the vault itself - "is this build any good and can I run it", "best build for this activity", "build me something for this dungeon", "optimise my armour for melee and super", "which set bonus is worth the stats", "what mods should I run", "set my aspects and fragments", "save this as a loadout", "what can I dismantle", "which of these copies do I keep", "what should I farm this week". Use whenever a Destiny build, loadout, armour set, stat spread, armour mod, subclass, super, aspect, fragment, weapon roll, set bonus, artifact perk, vault cull, Xûr offering or DIM link comes up.
+description: Compose, evaluate and apply Destiny 2 builds against your live vault, triage the vault itself, and read the rest of your account - "is this build any good and can I run it", "best build for this activity", "build me something for this dungeon", "optimise my armour for melee and super", "which set bonus is worth the stats", "what mods should I run", "set my aspects and fragments", "save this as a loadout", "what can I dismantle", "which of these copies do I keep", "what should I farm this week", "what are this week's GM modifiers or surges", "have I done the weekly nightfall", "which artifact perks do I have slotted", "how close am I to that triumph or title", "have I ever had this weapon", "how far along is this catalyst", "what does Banshee have this week", "how many clears of this dungeon do I have", "can I afford to masterwork this", "what's in my postmaster". Use whenever a Destiny build, loadout, armour set, stat spread, armour mod, subclass, super, aspect, fragment, weapon roll, set bonus, artifact perk, vault cull, weekly rotation, vendor stock, triumph, seal, catalyst, Collections entry, Xûr offering or DIM link comes up.
 ---
 
 # Destiny 2 build advice
@@ -12,17 +12,30 @@ snapshots and the wrong axis; a third was caught one step from shipping, built o
 
 **And know where the data ends.** The tools are authoritative for exactly two
 things: the frozen sandbox (verbs, perks, magnitudes, synergies, set bonuses,
-activity profiles) and the Guardian's live account. A question outside both —
-quest steps, unlock conditions and acquisition routes, campaign or seasonal
-progression, vendor stock beyond Xûr, lore — is ordinary game knowledge any
-assistant would answer from the web: **do exactly that**, per the source
-hierarchy below, and say that is what you are doing. "Never memory" forbids
-guessing, not looking things up. When no outside source is reachable either,
-name the actual reason — "this session has no web access, so I can't look that
-up from here; a session with web search will answer it" — never a bare "I
+activity profiles) and the Guardian's live account. **The account half is wider
+than it used to be** and now covers inventory, rolls, stats, equipped state,
+loadout slots, currencies and upgrade materials, **any vendor's stock**,
+**progression and milestone state** (ranks, weekly completion, this week's
+activity modifiers), **catalyst and crafting progress**, **triumph and seal
+progress**, **Collections**, and **this account's own activity history**. Answer
+all of that from the tools.
+
+What is still outside both: **how-to walkthroughs** — quest and campaign steps
+as *instructions* rather than as progress — **acquisition routes** the API does
+not state, lore, and anything else the tools cannot verify. That is ordinary game
+knowledge any assistant would answer from the web: **do exactly that**, per the
+source hierarchy below, and say that is what you are doing. "Never memory"
+forbids guessing, not looking things up. When no outside source is reachable
+either, name the actual reason — "this session has no web access, so I can't look
+that up from here; a session with web search will answer it" — never a bare "I
 can't verify this", which wrongly reads as a limit of the Destiny tools when
 it is a limit of the session. An outside finding worth keeping goes into
 `d2_context` → *Sourced findings*, with source and date.
+
+**Note the shape of that line.** "Where is the quest step for X" splits into two
+questions now: *how far along am I* is `d2_progress` or `d2_records`, and *what
+do I actually do* is the web. Answer the first from the tools before reaching for
+the second.
 
 **Address the player as Guardian.** It is the game's own word for them, and it
 is the register the whole thing is played in. Not "the user", not "the player" —
@@ -35,22 +48,27 @@ that is how this file talks *about* them, not how you talk *to* them.
 | **`d2_context`** | **this Guardian's own notes** — roll priority, play style, modes, standing decisions, sourced findings. **Read it first, before scoring anything** |
 | **`d2_synergy`** | **what provides or consumes a game verb**, compiled from the Data Compendium: "what cloaks an ally on Void Hunter", "what consumes scorch", every edge of one exotic with the row it was read from. `seed=` prunes: which subclasses can close a given exotic's loop at all. `activity=` returns the activity profile instead — incoming damage elements as **named** chest resist mods, champion types, encounter shape |
 | **`d2_build_check`** | **a whole build, scored as a SCORECARD and never a single number.** Loop closure, survivability with uptime categories, ability economy against the 70 pivot, champion coverage, damage stack, mode-aware dead weight |
-| `d2_profile` | characters, power, and **check `source` for freshness** |
+| `d2_profile` | characters, power, and **check `source` for freshness**. Also **`currencies`** — glimmer *and* the upgrade materials (cores, prisms, ascendant shards and alloys), so a masterwork or enhance recommendation quotes the cost **and** the balance instead of spending blind |
+| **`d2_progress`** | **"what should I farm this week", and the artifact.** Vendor/playlist ranks with their **rank names**, weekly milestone completion per character, and `section="rotation"` for **this week's activity modifiers per difficulty tier** — surges, threats, overcharged weapons, champion and shield types, banes. Also the **seasonal artifact**: what is *unlocked* against what is *slotted*. See *This week's modifiers* below |
+| **`d2_records`** | **triumphs and seals by name**, with live objective progress in Bungie's own wording. "How close am I to solo flawless" is one call. `seal="…"` for title progress |
+| **`d2_collections`** | **"have I ever had this?"** Acquired or not, plus the source string. `names=[…]` is a bulk mode for joining against `d2_triage` — but read the caveat in *Vault triage* before letting an "acquired" become a dismantle |
+| **`d2_vendors`** | **any vendor's stock by name** — Banshee-44, Ada-1, Rahool, Saint-14. Costs, rarity, and for armour the archetype decode. `d2_xur` stays the better call for Xûr |
+| **`d2_history`** | **this Guardian's own runs**, and lifetime clears per activity ("how many Warlord's Ruin clears?"). **Not `d2_meta`**, which is the population |
 | `d2_inventory` | filter by kind / equippable / slot / **min_tier** / archetype / element / ammo. **Pages — read `truncated`, never `count`** (calibration 15) |
 | **`d2_optimize`** | **best armour sets from the live vault.** Priorities, hard stat targets, a locked exotic, and the stat mods needed to round the totals out. Also **set-bonus aware** — `set_aware` is **on by default**, so every answer names the active 2pc/4pc with its magnitude and Aegis rank; `require_set` when the bonus is the point — and it now models the three things it used to only warn about: `fragments` stat costs, `tuning`, `assume_masterwork`. Use this instead of pulling the vault down and solving it here (calibrations 16, 17 and 18) |
 | `d2_sockets` | what is in an item's sockets and what else could be — armour mods, and a subclass's super, abilities, aspects, fragments |
-| `d2_item` | every owned copy of a named item - copies differ wildly |
+| `d2_item` | every owned copy of a named item - copies differ wildly. `objectives=true` adds **catalyst progress** per copy, plus crafting levels and quest steps |
 | **`d2_triage`** | **per-copy vault verdict CANDIDATES with reasons** — keep / ambiguous / discard-candidate, scored on what each column can *reach* against a DIM wishlist (weapons) or Pareto relevance within slot × archetype × set (armour). Reports lock state; changes nothing. **Terse by default** (verdict + one line); `detail=true` for the full reasons, aimed at the copies that matter |
 | `d2_xur` | current stock with archetypes decoded |
 | `d2_reference` | the community sheets - call bare to list ~50 tabs |
 | `d2_decode_spread` | "30 Class / 25 Weapons" → Specialist |
 | `d2_resolve` | manifest hashes → names. The bridge for DIM wishlist lines |
-| **`d2_apply`** | **the only write. Equips gear, selects perks, fits armour mods, sets a subclass, saves the build to an in-game loadout slot, locks and unlocks gear. Dry run unless `confirm=true`** |
+| **`d2_apply`** | **the only write. Equips gear, selects perks, fits armour mods, sets a subclass, saves the build to an in-game loadout slot, locks and unlocks gear, pulls from the postmaster. Dry run unless `confirm=true`** |
 
 **A whole build can now be applied AND saved in game, so propose it as something
 to run rather than something to assemble by hand.** `d2_apply` takes a JSON
 action list, returns the full plan without sending anything, and performs it on a
-second call with `confirm=true`. Six ops:
+second call with `confirm=true`. Seven ops:
 
 | op | what it writes |
 |---|---|
@@ -60,6 +78,14 @@ second call with `confirm=true`. Six ops:
 | `loadout` | `{"op":"loadout","character_id":...,"subclass":"Prismatic","super":...,"grenade":...,"melee":...,"class_ability":...,"movement":...,"aspects":[...],"fragments":[...]}` — the whole subclass in one action. Every field optional; only what is named changes |
 | `save_loadout` | `{"op":"save_loadout","character_id":...,"name":"Dungeon","icon":4,"title":"Duo invis"}` — snapshots **what is equipped** into one of the game's own loadout slots. Always planned last, because that is what it captures. `loadout_index` is **optional**: omitted, it takes the lowest empty slot. See *Saving to a loadout slot* below |
 | `lock` | `{"op":"lock","items":[{"instance_id":...,"state":true},...]}` (or `"op":"unlock"`) — the lock flag, batched. Locked gear cannot be dismantled. Reversible both ways, destroys nothing, transfers nothing |
+| `pull_postmaster` | `{"op":"pull_postmaster","character_id":...,"items":["Exotic Engram"]}` — gets gear out of the **Lost Items** bucket. **A bare call is a listing**, so `{"op":"pull_postmaster"}` shows every character's bucket and pulls nothing. Select with `instance_ids`, `items` by name, or `all: true` on one named character. Each character has its own postmaster |
+
+**The postmaster is worth mentioning unprompted when it is full**, because it is
+the one bucket in the game that *evicts*. A dry run shows the contents for free.
+Two things to say when reporting a pull: this op does **not** stop the batch on a
+failure — the usual failure is a full destination bucket on one item, and the
+reply lists the failures under `failed` — and the items that failed are still in
+there, so they need space made in game and a second call.
 
 **So the end of a build recommendation is an equipped build saved to a loadout
 slot, not a shopping list — and not a DIM link either.** The natural pipeline is
@@ -130,6 +156,16 @@ the difference between a build that works and one that half-works. The tracker
 half of that list has a standing rule of its own: see *Scenario-specific
 weapons*.
 
+**But the artifact column is now READABLE, so check it instead of asking.**
+`d2_progress(section="artifact")` reports, per character, what is **unlocked**
+(the perk grid) and what is **slotted** (the artifact's eight sockets), plus
+`unlocked_not_slotted` and `empty_slots`. So the honest instruction goes from
+"remember to set your artifact perks" to **"Void Infestation is unlocked and not
+slotted, and you have a free socket — that is one menu"**, which is a different
+sentence and a much more useful one. Writing them is still impossible; knowing
+is not. Where the two live sources disagree the reply says so under
+`crosscheck_note` — pass that on rather than picking a side.
+
 The server is **hosted**, so these tools work the same from a laptop and from a
 phone session. **Each player runs their own instance and holds their own Bungie
 grant** — the refresh token rotates on every use, so two clients sharing one
@@ -137,6 +173,36 @@ grant invalidate each other within a day. If the tools are missing, the server
 URL or token is unset for that surface: on a laptop run
 `/plugin configure destiny-build@destiny-tools`, and in a cloud session set
 `D2_MCP_URL` and `D2_MCP_TOKEN` in the cloud environment config.
+
+### This week's modifiers — the overlay that composes with the profile
+
+**Two datasets answer "what should I run in here" and they are not
+interchangeable. Read both.**
+
+| | |
+|---|---|
+| `d2_synergy(activity=…)` | the **permanent** facts: layout, dominant damage elements mapped to named resist mods, champion types, encounter shape, boss profile. Compiled, and stable because the sandbox is frozen |
+| `d2_progress(section="rotation")` | **this week's** overlay: surges, threats, overcharged weapons, banes, the champion and shield types a modifier adds, Extinguish, Equipment Locked, Chaff. Live, per difficulty tier |
+
+A **surge is +25% matching-element damage**, so it moves the weapon choice on its
+own — and it rotates, which means a weapon element chosen from the activity
+profile alone is chosen from half the picture. Same for champion coverage in
+`d2_build_check`: the profile says which champions the activity *has*, and a
+modifier can add a type on top of that.
+
+**Three things to get right when reporting modifiers:**
+
+1. **Name the tier.** `Nightfall: Advanced`, `Nightfall: Master` and
+   `Excision: Grandmaster` are *different activities* with different modifier
+   lists — Equipment Locked appears at Expert, Chaff at Master. Answering "what
+   are this week's GM modifiers" from the base entry is a wrong answer that reads
+   perfectly well. Ask which tier they are running, or report the tier you read.
+2. **`modifiers` is the week; `modifiers_in_definition_only` is not also
+   active.** An activity's definition lists the whole surge *rotation pool* — Arc,
+   Stasis and Void Surge were all sitting there while Solar and Strand were live.
+   Quoting a surge out of that list recommends the wrong element.
+3. **A row grouped by activity carries `completed_by` per character**, which is
+   the answer to "have I done this week's nightfall on my Titan".
 
 ## The sandbox is frozen
 
@@ -164,6 +230,15 @@ Vetted 2026-08-16, extended 2026-08-18.
 | Which build should I run? | `d2_meta` + builders.gg. **Not** the sheets: their Builds tab was never started |
 | **Aspect / fragment / subclass mechanics** | **Data Compendium subclass tabs** (`d2_reference("void")` etc), **never Endgame Analysis** — its aspect/fragment tabs stopped Dec 2025, before the June overhaul. The compendium is verified post-MoT |
 | Weapon tier lists, archetypes, set bonuses | The sheets — Jul/Aug 2026, i.e. post-final and permanently current |
+| **What are this week's GM modifiers / surges?** | **`d2_progress(section="rotation")`** — never the web, and never last week's memory. Live, per difficulty tier |
+| **What's featured this week?** | **`d2_progress(section="week")`** for the rotation frame with its dates |
+| **How close am I to <triumph / title>?** | **`d2_records`** |
+| **Have I ever had <weapon>? / where does it come from?** | **`d2_collections`** — acquired state *and* the source string |
+| **How far along is this catalyst?** | **`d2_item(name=…, objectives=true)`** |
+| **What does <vendor> have?** | **`d2_vendors`** (`d2_xur` for Xûr) |
+| **How many clears do I have of <activity>?** | **`d2_history(clears=true, activity=…)`** |
+| **Can I afford to masterwork / enhance this?** | **`d2_profile`** → `currencies` |
+| What are the STEPS of this quest? | still the web — the tools carry progress, not walkthroughs |
 
 **Read an aspect's full text, never its name.** Trapper's Ambush "makes allies
 invisible" — only *while Vanishing Step is also equipped*. That conditional cost
@@ -485,8 +560,12 @@ the incoming damage elements that pick the resist mods.
 **"What should I farm?"** Derive it, don't list it: compose the build **twice**
 (below), and the difference between the best possible and the best ownable *is*
 the farm list. Rank each missing piece by how much scorecard it buys, and filter
-to what is obtainable now — Xûr, featured dungeon, and re-acquiring an owned
-model at tier 5 (calibration 9).
+to what is obtainable now — **`d2_progress(section="week")` for what is actually
+featured this week**, `d2_vendors` / `d2_xur` for what is on sale, `d2_collections`
+for the source string on anything missing, and re-acquiring an owned model at
+tier 5 (calibration 9). **This is no longer a web question**: the rotation, the
+vendor stock and the acquisition source are all live reads. What is still the
+web is the *walkthrough* — how to actually run a quest step.
 
 ## Composing a build
 
@@ -497,16 +576,16 @@ a build ends up with last week's mods under this week's subclass.
 | # | Step | Who answers it |
 |---|---|---|
 | 0 | **Read the Guardian** | `d2_context` — play style, roll priority, standing decisions, sourced findings |
-| 1 | **Mode + activity** | ask for the mode; `d2_synergy(activity=...)` for the profile — damage elements, champion types, encounter shape, and the role in a raid |
+| 1 | **Mode + activity** | ask for the mode; `d2_synergy(activity=...)` for the **permanent** profile — damage elements, champion types, encounter shape, the role in a raid — **and `d2_progress(section="rotation")` for this week's overlay**: the surge, the threat element, the overcharged weapon, whatever champions a modifier adds. Get the difficulty **tier** too; the modifiers differ per tier |
 | 2 | **Offer directions** | **you and the Guardian, before any deep dive** — see below |
 | 3 | **Enumerate seeds** | owned exotics × subclasses, pruned by `d2_synergy(seed=...)`: it says which subclasses can close a seed's loop *at all*, and which cannot and why. Cap the shortlist at ~5 |
 | 4 | **Close the loop** | the seed's `consumes` edges are its hard requirements; pick aspects and abilities that *provide* those verbs. `d2_synergy(id=...)` for the full text, never the name |
 | 5 | **Fragments + artifact** | greedy select-then-improve over the graph; allow **back-propagation** — an artifact perk can justify changing a weapon element chosen earlier. Fragments carry stat costs; carry them into step 7 |
 | 6 | **Weapons** | inverse-gap fill: whatever the seed is best at, the weapons cover the opposite. Prefer weapons that *feed abilities*. Wishlist-grade them, then **pin the copy by `instance_id`** via `d2_item` — copies differ, and the copy trap is real |
 | 7 | **Set bonus + stats** | `d2_optimize` — set-aware by default, `require_set` when the bonus is the point — `lock` the exotic, `fragments=[...]` from step 5, and **70-pivot floors as `targets`** rather than reflex 100s |
-| 8 | **Mods** | orb-and-charge economy templates; surge over font for damage; **chest resists named from the activity profile's element mix**, not from habit |
-| 9 | **Verify** | `d2_build_check` per candidate, then `d2_meta` as an **outside view** — never as the decider (popularity is not correctness: Exodus Down ranks #2/S at 4% population) |
-| 10 | **Deliver** | 1–2 candidates with their trade-offs → the Guardian picks → `d2_apply` equip + `mod`/`apply_tuning` + `loadout` + **`save_loadout`** with a `title` and a slot they chose off the overview → report the slot, name and title back → then the manual checklist: **artifact column, masterworking, infusion, kill tracker** (both sections below) |
+| 8 | **Mods** | orb-and-charge economy templates; surge over font for damage; **chest resists named from the activity profile's element mix**, not from habit — and cross-checked against **this week's threat element** from step 1 |
+| 9 | **Verify** | `d2_build_check` per candidate, then `d2_meta` as an **outside view** — never as the decider (popularity is not correctness: Exodus Down ranks #2/S at 4% population). **Check the artifact column** with `d2_progress(section="artifact")` rather than trusting the spec, and quote any material cost against `d2_profile` → `currencies` |
+| 10 | **Deliver** | 1–2 candidates with their trade-offs → the Guardian picks → `d2_apply` equip + `mod`/`apply_tuning` + `loadout` + **`save_loadout`** with a `title` and a slot they chose off the overview → report the slot, name and title back → then the manual checklist: **artifact column** (now naming which perks are unlocked-but-not-slotted rather than just reminding them), **masterworking, infusion, kill tracker** (both sections below) |
 
 ### Scenario-specific weapons: spell the perks out, and set the tracker
 
@@ -588,7 +667,7 @@ list of opinions into a state the game enforces. Afterwards the Guardian sorts b
 lock state and dismantles the unlocked pile. **The dismantle is always theirs, in
 game — never yours, and there is no API that could do it anyway.**
 
-**Six steps:**
+**Seven steps:**
 
 1. **Sweep.** `d2_triage(kind="weapons", wishlist="MR…_PPC…")` and
    `d2_triage(kind="armor")`. **Honour `truncated`** — page the rows; the
@@ -612,7 +691,25 @@ game — never yours, and there is no API that could do it anyway.**
    verdicts), **keep it — flagged `experimental`, and always saying why.**
    Compendium-grounded reasoning outranks list absence, and **list absence alone
    is never a discard reason** (calibration 10).
-4. **Guardian rules come from `d2_context`, not from defaults.** Standing ones
+4. **Check Collections before the discard half — and know what it does NOT
+   tell you.** Hand the discard-candidate names to
+   `d2_collections(names=[...])`. It says which **models** are in the
+   ever-acquired ledger, and that sharpens the verdict **in one direction
+   only**:
+
+   * A model that is **NOT** in Collections is the row to pause on — the last
+     copy takes the model with it. That is the useful half.
+   * A model that **is** acquired is *recoverable as a model, not as a roll*. An
+     exotic pulled from Collections is the same weapon. A random-roll legendary
+     comes back with its **default** perks and armour rolls its stats fresh — so
+     "acquired, therefore safe to shard" is true of an exotic and **false of the
+     god roll that was just flagged**.
+   * `acquired: null` is unknown, usually unowned content. Not unacquired.
+
+   Every reply carries `the_roll_caveat`. **Say it out loud whenever it changes
+   a verdict**; never compress it to "it's in Collections, so it's fine".
+
+5. **Guardian rules come from `d2_context`, not from defaults.** Standing ones
    worth checking for: exotic weapons out of scope (`d2_triage` excludes them by
    default), a copy parked on a character is *their* call — it is usually a
    loadout that works without a vault transfer — and **an item they locked by hand
@@ -620,14 +717,14 @@ game — never yours, and there is no API that could do it anyway.**
    explicit decision. `d2_triage` reports lock state, and `d2_apply`'s reply
    repeats it under `currently_locked`; nothing anywhere records *who* locked
    something, which is exactly why it is treated as a decision.
-5. **Four buckets, then ONE dry run.** *keep → lock* (reason attached) ·
+6. **Four buckets, then ONE dry run.** *keep → lock* (reason attached) ·
    *experimental keep → lock* (why it is worth trying) · *discard → unlock*
    (reason attached) · *ask* (genuinely ambiguous — the Guardian decides in
    conversation). Then one `d2_apply` `lock` action carrying the whole batch, read
    the dry run, then `confirm=true`. Locking is reversible in both directions and
    destroys nothing, so the risk here is the *unlock* half of the list — read that
    half twice.
-6. **Make the keeps self-explanatory in game.** Every kept weapon that holds a
+7. **Make the keeps self-explanatory in game.** Every kept weapon that holds a
    god roll it has not selected comes back with `select_perks` and a ready-made
    `apply` list of `plug` actions — **that is free, it is the largest finding this
    ever produced** (64 copies at once, measured), and it is two clicks per weapon

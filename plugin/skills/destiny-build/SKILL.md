@@ -49,16 +49,16 @@ that is how this file talks *about* them, not how you talk *to* them.
 | **`d2_synergy`** | **what provides or consumes a game verb**, compiled from the Data Compendium: "what cloaks an ally on Void Hunter", "what consumes scorch", every edge of one exotic with the row it was read from. `seed=` prunes: which subclasses can close a given exotic's loop at all. `activity=` returns the activity profile instead — incoming damage elements as **named** chest resist mods, champion types, encounter shape |
 | **`d2_build_check`** | **a whole build, scored as a SCORECARD and never a single number.** Loop closure, survivability with uptime categories, ability economy against the 70 pivot, champion coverage, damage stack, mode-aware dead weight |
 | `d2_profile` | characters, power, and **check `source` for freshness**. Also **`currencies`** — glimmer *and* the upgrade materials (cores, prisms, ascendant shards and alloys), so a masterwork or enhance recommendation quotes the cost **and** the balance instead of spending blind |
-| **`d2_progress`** | **"what should I farm this week", and the artifact.** Vendor/playlist ranks with their **rank names**, weekly milestone completion per character, and `section="rotation"` for **this week's activity modifiers per difficulty tier** — surges, threats, overcharged weapons, champion and shield types, banes. Also the **seasonal artifact**: what is *unlocked* against what is *slotted*. See *This week's modifiers* below |
+| **`d2_progress`** | **"what should I farm this week", and the artifact.** A bare call is a **summary** — the artifact, the *outstanding* milestones, this week's modifiers, the currencies — and it names what it left out under `sections_omitted`, so ask for `section="ranks"` / `"milestones"` / `"week"` / `"artifact"` rather than assuming a missing section is empty. `section="rotation"` is **this week's activity modifiers per difficulty tier** — surges, threats, overcharged weapons, champion and shield types, banes. Also the **seasonal artifact**: what is *unlocked* against what is *slotted*. See *This week's modifiers* below |
 | **`d2_records`** | **triumphs and seals by name**, with live objective progress in Bungie's own wording. "How close am I to solo flawless" is one call. `seal="…"` for title progress |
-| **`d2_collections`** | **"have I ever had this?"** Acquired or not, plus the source string. `names=[…]` is a bulk mode for joining against `d2_triage` — but read the caveat in *Vault triage* before letting an "acquired" become a dismantle |
+| **`d2_collections`** | **"have I ever had this?"** Acquired or not, plus the source string. `names=[…]` is a bulk mode — though `d2_triage` now joins this itself on its discard half, so reach for it for the question asked outside a sweep. Read the caveat in *Vault triage* before letting an "acquired" become a dismantle |
 | **`d2_vendors`** | **any vendor's stock by name** — Banshee-44, Ada-1, Rahool, Saint-14. Costs, rarity, and for armour the archetype decode. `d2_xur` stays the better call for Xûr |
 | **`d2_history`** | **this Guardian's own runs**, and lifetime clears per activity ("how many Warlord's Ruin clears?"). **Not `d2_meta`**, which is the population |
 | `d2_inventory` | filter by kind / equippable / slot / **min_tier** / archetype / element / ammo. **Pages — read `truncated`, never `count`** (calibration 15) |
 | **`d2_optimize`** | **best armour sets from the live vault.** Priorities, hard stat targets, a locked exotic, and the stat mods needed to round the totals out. Also **set-bonus aware** — `set_aware` is **on by default**, so every answer names the active 2pc/4pc with its magnitude and Aegis rank; `require_set` when the bonus is the point — and it now models the three things it used to only warn about: `fragments` stat costs, `tuning`, `assume_masterwork`. Use this instead of pulling the vault down and solving it here (calibrations 16, 17 and 18) |
 | `d2_sockets` | what is in an item's sockets and what else could be — armour mods, and a subclass's super, abilities, aspects, fragments |
 | `d2_item` | every owned copy of a named item - copies differ wildly. `objectives=true` adds **catalyst progress** per copy, plus crafting levels and quest steps |
-| **`d2_triage`** | **per-copy vault verdict CANDIDATES with reasons** — keep / ambiguous / discard-candidate, scored on what each column can *reach* against a DIM wishlist (weapons) or Pareto relevance within slot × archetype × set (armour). Reports lock state; changes nothing. **Terse by default** (verdict + one line); `detail=true` for the full reasons, aimed at the copies that matter |
+| **`d2_triage`** | **per-copy vault verdict CANDIDATES with reasons** — keep / ambiguous / discard-candidate, scored on what each column can *reach* against a DIM wishlist (weapons) or Pareto relevance within slot × archetype × set (armour). Reports lock state; changes nothing. **Terse by default** (verdict + one line); `detail=true` for the full reasons, aimed at the copies that matter. **Joins Collections onto the discard half automatically** — `reacquirable_from_collections` per row, `collections=false` to skip |
 | `d2_xur` | current stock with archetypes decoded |
 | `d2_reference` | the community sheets - call bare to list ~50 tabs |
 | `d2_decode_spread` | "30 Class / 25 Weapons" → Specialist |
@@ -203,6 +203,12 @@ modifier can add a type on top of that.
    Quoting a surge out of that list recommends the wrong element.
 3. **A row grouped by activity carries `completed_by` per character**, which is
    the answer to "have I done this week's nightfall on my Titan".
+4. **The default list is filtered, and the reply says how.** Rotation is
+   narrowed to what this week's *milestones* name plus their difficulty tiers, so
+   a rotator no milestone points at is missing from a list that reads as
+   complete. Read `filter_summary` — *showing N of M activities* — and if the
+   activity they asked about is not there, `search="<name>"` or
+   `all_activities=true` before saying it is not rotating.
 
 ## The sandbox is frozen
 
@@ -691,23 +697,30 @@ game — never yours, and there is no API that could do it anyway.**
    verdicts), **keep it — flagged `experimental`, and always saying why.**
    Compendium-grounded reasoning outranks list absence, and **list absence alone
    is never a discard reason** (calibration 10).
-4. **Check Collections before the discard half — and know what it does NOT
-   tell you.** Hand the discard-candidate names to
-   `d2_collections(names=[...])`. It says which **models** are in the
-   ever-acquired ledger, and that sharpens the verdict **in one direction
-   only**:
+4. **Read the Collections annotation on the discard half — it arrives with the
+   sweep.** `d2_triage` joins component 800 itself, once per sweep, so every
+   discard-candidate row already carries `reacquirable_from_collections` and a
+   per-row `collections_note`, and the reply carries a `collections_join` block.
+   No second call is needed; **`collections=false`** turns the join off, and the
+   rows then read `unknown`. It sharpens the verdict **in one direction only**:
 
-   * A model that is **NOT** in Collections is the row to pause on — the last
-     copy takes the model with it. That is the useful half.
-   * A model that **is** acquired is *recoverable as a model, not as a roll*. An
-     exotic pulled from Collections is the same weapon. A random-roll legendary
-     comes back with its **default** perks and armour rolls its stats fresh — so
-     "acquired, therefore safe to shard" is true of an exotic and **false of the
-     god roll that was just flagged**.
-   * `acquired: null` is unknown, usually unowned content. Not unacquired.
+   * **`false`** is the row to pause on — nothing has recorded this model, so the
+     last copy takes the model with it. That is the useful half.
+   * **`true`** is *recoverable as a model, not as a roll*. An exotic pulled from
+     Collections is the same weapon. A random-roll legendary comes back with its
+     **default** perks and armour rolls its stats fresh — so "acquired, therefore
+     safe to shard" is true of an exotic and **false of the god roll that was
+     just flagged**. Where a row's value *is* its roll — an unselected god roll,
+     or any armour piece, whose stats re-roll on re-acquisition — its own
+     `collections_note` says so. Quote that sentence; do not paraphrase it away.
+   * **`null`** is unknown — a lookup miss, unowned content, an unreadable
+     component 800, or the join switched off. Never unacquired.
 
-   Every reply carries `the_roll_caveat`. **Say it out loud whenever it changes
-   a verdict**; never compress it to "it's in Collections, so it's fine".
+   The join block carries `the_roll_caveat`. **Say it out loud whenever it
+   changes a verdict**; never compress it to "it's in Collections, so it's fine".
+   `d2_collections(names=[...])` is still the call for the same question asked
+   outside a sweep, or for the keep and ambiguous halves the join deliberately
+   leaves alone.
 
 5. **Guardian rules come from `d2_context`, not from defaults.** Standing ones
    worth checking for: exotic weapons out of scope (`d2_triage` excludes them by

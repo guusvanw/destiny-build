@@ -140,6 +140,15 @@ every character's Lost Items bucket and pulls nothing; and a failure does **not*
 stop the batch, because the usual failure is one full destination bucket while
 the bucket everything else is sitting in *evicts*. Failures come back per row.
 
+**Where a piece currently sits does not limit what can be recommended.** Bungie's
+transfer is character-to-vault or vault-to-character and has no third form, so a
+copy held by another Guardian is planned as two hops through the vault, and a
+full destination bucket has something moved out of it first — named in the plan,
+with the rule that chose it, and moved to the *vault* rather than dismantled.
+Two things genuinely refuse and both say what to do about it: gear **equipped on
+another character** (Bungie will not transfer equipped gear) and a **full
+vault**.
+
 Performing a write needs `confirm=true` per action — that is the real gate, and
 the plan is always shown first — plus `D2_ALLOW_WRITE` on **your own** server,
 which is a kill switch for freezing every write at once rather than a per-feature

@@ -46,8 +46,8 @@ that is how this file talks *about* them, not how you talk *to* them.
 | Tool | Use |
 |---|---|
 | **`d2_context`** | **this Guardian's own notes** — roll priority, play style, modes, standing decisions, sourced findings. **Read it first, before scoring anything** |
-| **`d2_synergy`** | **what provides or consumes a game verb**, compiled from the Data Compendium: "what cloaks an ally on Void Hunter", "what consumes scorch", every edge of one exotic with the row it was read from. `seed=` prunes: which subclasses can close a given exotic's loop at all. `activity=` returns the activity profile instead — incoming damage elements as **named** chest resist mods, champion types, encounter shape |
-| **`d2_build_check`** | **a whole build, scored as a SCORECARD and never a single number.** Loop closure, survivability with uptime categories, ability economy against the 70 pivot, champion coverage, damage stack, mode-aware dead weight. Plus **`artifact_check`** against the live account: is the stated artifact the one equipped, is each named perk even a perk of it, is it slotted |
+| **`d2_synergy`** | **what provides or consumes a game verb**, compiled from the Data Compendium: "what cloaks an ally on Void Hunter", "what consumes scorch", every edge of one exotic with the row it was read from. `seed=` prunes: which subclasses can close a given exotic's loop at all. `activity=` returns the activity profile instead — incoming damage elements as **named** chest resist mods, champion types, encounter shape. On an **aspect**, an id query also carries **`fragment_slots`** — how many fragment slots it opens |
+| **`d2_build_check`** | **a whole build, scored as a SCORECARD and never a single number.** Loop closure, survivability with uptime categories, ability economy against the 70 pivot, champion coverage, damage stack, mode-aware dead weight. Plus **`artifact_check`** against the live account: is the stated artifact the one equipped, is each named perk even a perk of it, is it slotted. And **`fragment_budget`**: the two aspects decide how many fragments the build may actually run — see *The fragment budget* below |
 | `d2_profile` | characters, power, and **check `source` for freshness**. Also **`currencies`** — glimmer *and* the upgrade materials (cores, prisms, ascendant shards and alloys), so a masterwork or enhance recommendation quotes the cost **and** the balance instead of spending blind |
 | **`d2_progress`** | **"what should I farm this week", and the artifact.** A bare call is a **summary** — the artifact, the *outstanding* milestones, this week's modifiers, the currencies — and it names what it left out under `sections_omitted`, so ask for `section="ranks"` / `"milestones"` / `"week"` / `"artifact"` rather than assuming a missing section is empty. `section="rotation"` is **this week's activity modifiers per difficulty tier** — surges, threats, overcharged weapons, champion and shield types, banes. Also the **seasonal artifact**: **which one is equipped** and what is *slotted* in its eight sockets. See *This week's modifiers* below |
 | **`d2_records`** | **triumphs and seals by name**, with live objective progress in Bungie's own wording. "How close am I to solo flawless" is one call. `seal="…"` for title progress |
@@ -72,7 +72,7 @@ second call with `confirm=true`. Seven ops:
 
 | op | what it writes |
 |---|---|
-| `equip` | `{"op":"equip","instance_id":...}` — transfers first if the piece is in the vault or on another character |
+| `equip` | `{"op":"equip","instance_id":...}` — transfers first if the piece is in the vault or on another character, in **two hops via the vault** for the second case, and moves something out of a full destination bucket first. See *Transfers* below |
 | `plug` | `{"op":"plug","instance_id":...,"column":"Trait 1","plug":"Repulsor Brace"}` — a weapon perk already unlocked in its column |
 | `mod` | `{"op":"mod","instance_id":...,"mods":["Melee Font","Heavy Handed","Void Loader"]}` — armour mods, each claiming its own socket, with energy cost reported and over-capacity warned. Reaches the **tuning** socket too, so `d2_optimize`'s `apply_tuning` goes straight in |
 | `loadout` | `{"op":"loadout","character_id":...,"subclass":"Prismatic","super":...,"grenade":...,"melee":...,"class_ability":...,"movement":...,"aspects":[...],"fragments":[...]}` — the whole subclass in one action. Every field optional; only what is named changes |
@@ -95,6 +95,57 @@ Guardian names. Live-proven for equip and plug 2026-08-18; **mod, loadout,
 save_loadout and lock are newer, so read the dry run before confirming them**
 rather than assuming. A DIM import URL is still worth offering **on request** —
 for sharing a build with another player — but it is no longer the deliverable.
+
+### Transfers: where a piece currently sits is never a reason to drop it
+
+**Bungie's transfer is character-to-vault or vault-to-character and has no third
+form**, and `d2_apply` handles all of it. What that means for you is one
+standing instruction: **gear location is NEVER a reason to exclude a candidate.**
+A copy parked on their Titan is as available as a copy in the vault — it just
+takes two steps — and a full destination bucket is a step, not a wall. Quietly
+picking the second-best piece because the best one is on another Guardian is a
+worse answer that looks like a considered one.
+
+Read the plan for three things it may add on your behalf:
+
+* **`via_vault`** — steps labelled `hop: 1 of 2` / `2 of 2`. Ordinary. Say the
+  piece is coming across from their other character; do not present it as a
+  complication.
+* **`make_room`** — gear moved to the **vault** to free a slot the plan needs,
+  because a gear bucket holds nine unequipped items. Nothing is dismantled and
+  it is all reversible, but **this is gear they did not name, so read the list
+  out to them before confirming.** The plan states the rule that chose each one
+  (never equipped, never locked, never anything else in the plan; then lowest
+  power, then oldest) — quote it if they ask why that piece.
+* **Two refusals with real fixes.** A piece **equipped on another character**
+  cannot be transferred at all: tell them to equip something else in that slot
+  over there, or offer to do it as a `d2_apply` equip against that character.
+  A **full vault** is the one genuine dead end — that one needs dismantling in
+  game.
+
+**Their moving policy lives in `d2_context`, not here** — *Characters and
+duplicates policy*. Some Guardians treat character inventories as working space
+and some park deliberate loadouts on each character. Read it before shuffling
+gear; **if it is absent, ask once and offer to record the answer.**
+
+### The fragment budget
+
+**Two aspects decide how many fragments a build may run**, and the game does not
+stop you overspending it: an extra fragment sits in a socket the aspects never
+opened, shows as slotted, and does nothing. That is silent, so `d2_build_check`
+says it out loud in `fragment_budget`.
+
+| what it says | what to do |
+|---|---|
+| **over budget** | blocking. It names the budget, the count and the overflow. Cut the weakest fragments before quoting the build |
+| **free slots** | an aspect's payment going unclaimed. Fill them, or reconsider an aspect bought for its slots |
+| **`verifiable: false`** | one of the aspects has no trusted count, so there is **no budget number** — the tool refuses to invent one rather than summing the half it has. Ask them to read the enabled fragment sockets off the subclass in game |
+| **`live_check`** | the same question asked of the account. `same_aspects: false` means the subclass currently has *different* aspects on, so the numbers are about different things — not a disagreement. Where the aspects match and the numbers differ, **the game wins** |
+| **`stranded_fragments`** | a fragment already sitting in a disabled socket on their subclass right now. Mention it unprompted; it is free value they are not getting |
+
+**Aspects before fragments in a build spec, then, for a second reason** — they
+set the budget, so a spec that names one aspect and six fragments cannot be
+checked against anything.
 
 ### Saving to a loadout slot
 
@@ -515,6 +566,39 @@ fine in a browser.
    and leave the choice where it belongs. Same rule for the two answers in a
    composition: **show the ceiling and the ownable build, always both.**
 
+22. **Fragments have a budget and the game does not enforce it out loud.** The
+   two aspects decide how many fragment slots exist — a subclass with no aspects
+   equipped opens **zero**, measured — and selecting a seventh fragment against a
+   five-slot pair is accepted silently: it sits in a disabled socket, reads as
+   slotted, and does nothing. Found live on a Warlock, after the build had
+   already been called fine. So **establish the budget before choosing
+   fragments**, not after, and read `fragment_budget` on every
+   `d2_build_check`. Two ways to get this wrong in the other direction: quoting
+   a budget the tool called **unverifiable** (it refuses to sum a pair with an
+   unknown half rather than understate it, because telling a Guardian to drop a
+   fragment they are entitled to costs the fragment and the trust together), and
+   treating a **free slot** as fine — an unspent slot is an aspect's payment
+   going unclaimed and is worth naming. And when `live_check` reports
+   `same_aspects: false`, that is not a disagreement: the subclass has different
+   aspects on it right now, so the two numbers describe different builds.
+
+23. **Where a piece sits is never a reason to drop it.** Bungie's transfer is
+   character-to-vault or vault-to-character with no third form, and `d2_apply`
+   plans around that: a copy on another Guardian is **two hops via the vault**,
+   and a full destination bucket (nine unequipped per gear bucket) gets
+   something moved out first. So a candidate is judged on its roll, never on its
+   location — quietly preferring the vault copy over the better one parked on
+   their Titan is a wrong answer that reads like a careful one. Two things
+   genuinely refuse and both name a fix: gear **equipped on another character**
+   (Bungie will not transfer equipped gear; they equip something else there, or
+   you plan that equip) and a **full vault**. And read `make_room` before
+   confirming: it is gear the Guardian did not name, moved to the vault to free
+   a slot — reversible, nothing dismantled, and still theirs to approve.
+   **Whether shuffling gear is welcome at all is in `d2_context` → *Characters
+   and duplicates policy*, not a default.** Some Guardians keep deliberate
+   loadouts parked per character. If the file does not say, ask once and offer
+   to record it.
+
 ## This Guardian's preferences are NOT in here — they are in `d2_context`
 
 **Deliberate split (2026-08-18).** This file holds what is true for *any*
@@ -535,7 +619,7 @@ cloud session. Read it, then ask about whatever it does not cover.
 | How do they play — range or close, survivability or damage? | `d2_context` → *Play style and modes*, then **ask** |
 | Solo, duo or matchmade **tonight**? | **always ask** — the file says what is usual, not what is happening now |
 | What is equipped, what is being farmed, what was decided? | `d2_context` → *Current state*, then **ask** |
-| Do duplicates matter? How many characters? | `d2_context` → *Characters and duplicates policy*, plus `d2_profile` |
+| Do duplicates matter? How many characters? **Is moving gear between them fine?** | `d2_context` → *Characters and duplicates policy*, plus `d2_profile`. The moving question is the one that decides whether a copy on another Guardian is a candidate — and it is a preference, so **ask if the file is silent** |
 | A grade or god-roll table from a blocked source | `d2_context` → *Sourced findings* (with its source and date) |
 | What do they own? | **`d2_inventory`, always** — never `d2_context`, never a remembered snapshot |
 
@@ -599,13 +683,13 @@ a build ends up with last week's mods under this week's subclass.
 | 0 | **Read the Guardian** | `d2_context` — play style, roll priority, standing decisions, sourced findings |
 | 1 | **Mode + activity** | ask for the mode; `d2_synergy(activity=...)` for the **permanent** profile — damage elements, champion types, encounter shape, the role in a raid — **and `d2_progress(section="rotation")` for this week's overlay**: the surge, the threat element, the overcharged weapon, whatever champions a modifier adds. Get the difficulty **tier** too; the modifiers differ per tier |
 | 2 | **Offer directions** | **you and the Guardian, before any deep dive** — see below |
-| 3 | **Enumerate seeds** | owned exotics × subclasses, pruned by `d2_synergy(seed=...)`: it says which subclasses can close a seed's loop *at all*, and which cannot and why. Cap the shortlist at ~5 |
+| 3 | **Enumerate seeds** | owned exotics × subclasses, pruned by `d2_synergy(seed=...)`: it says which subclasses can close a seed's loop *at all*, and which cannot and why. Cap the shortlist at ~5. **Owned means owned anywhere** — vault, any character, equipped on any character. Prune on what the exotic *does*, never on where it is sitting |
 | 4 | **Close the loop** | the seed's `consumes` edges are its hard requirements; pick aspects and abilities that *provide* those verbs. `d2_synergy(id=...)` for the full text, never the name |
-| 5 | **Fragments + artifact** | greedy select-then-improve over the graph; allow **back-propagation** — an artifact perk can justify changing a weapon element chosen earlier. Fragments carry stat costs; carry them into step 7 |
-| 6 | **Weapons** | inverse-gap fill: whatever the seed is best at, the weapons cover the opposite. Prefer weapons that *feed abilities*. Wishlist-grade them, then **pin the copy by `instance_id`** via `d2_item` — copies differ, and the copy trap is real |
+| 5 | **Fragments + artifact** | **the two aspects from step 4 set the fragment budget, so establish it first** — `d2_synergy(id=...)` per aspect gives `fragment_slots`, and `d2_build_check` totals it in `fragment_budget`. Then greedy select-then-improve over the graph, *within* that budget; allow **back-propagation** — an artifact perk can justify changing a weapon element chosen earlier. Fragments carry stat costs; carry them into step 7. If the budget comes back unverifiable, ask them to read the enabled fragment sockets in game rather than picking a number |
+| 6 | **Weapons** | inverse-gap fill: whatever the seed is best at, the weapons cover the opposite. Prefer weapons that *feed abilities*. Wishlist-grade them, then **pin the copy by `instance_id`** via `d2_item` — copies differ, and the copy trap is real. **Where the copy currently sits is not a filter.** A copy on another character or in a full bucket is still the copy: `d2_apply` moves it, in two hops if it has to, and makes room if the bucket is full. Excluding it and recommending a weaker roll is a wrong answer that reads like a careful one — check their moving policy in `d2_context`, not your own instinct |
 | 7 | **Set bonus + stats** | `d2_optimize` — set-aware by default, `require_set` when the bonus is the point — `lock` the exotic, `fragments=[...]` from step 5, and **70-pivot floors as `targets`** rather than reflex 100s |
 | 8 | **Mods** | orb-and-charge economy templates; surge over font for damage; **chest resists named from the activity profile's element mix**, not from habit — and cross-checked against **this week's threat element** from step 1 |
-| 9 | **Verify** | `d2_build_check` per candidate, then `d2_meta` as an **outside view** — never as the decider (popularity is not correctness: Exodus Down ranks #2/S at 4% population). **the artifact column is checked for you** — `d2_build_check` compares the stated artifact against the equipped one and each stated perk against the slotted set, so read `artifact_check` rather than trusting the spec — and quote any material cost against `d2_profile` → `currencies` |
+| 9 | **Verify** | `d2_build_check` per candidate, then `d2_meta` as an **outside view** — never as the decider (popularity is not correctness: Exodus Down ranks #2/S at 4% population). **The artifact column and the fragment budget are both checked for you** — `d2_build_check` compares the stated artifact against the equipped one and each stated perk against the slotted set, and totals the aspects' fragment slots against the fragments named — so read `artifact_check` and `fragment_budget` rather than trusting the spec, and quote any material cost against `d2_profile` → `currencies` |
 | 10 | **Deliver** | 1–2 candidates with their trade-offs → the Guardian picks → `d2_apply` equip + `mod`/`apply_tuning` + `loadout` + **`save_loadout`** with a `title` and a slot they chose off the overview → report the slot, name and title back → then the manual checklist: **artifact column** (naming which perks are not slotted, and the artifact to equip if it is the wrong one — never "unlock", they all are), **masterworking, infusion, kill tracker** (both sections below) |
 
 ### Scenario-specific weapons: spell the perks out, and set the tracker
@@ -804,7 +888,7 @@ The sections, roughly in order of how often they get re-derived:
 | **Play style and modes** | range or close, survivability or damage, which stats are dead |
 | **Activity mix** | solo / duo / matchmade — the same build scores differently in each, and ally-facing perks are worthless solo and often the best line on the sheet in duo |
 | **Current state** | what is equipped, what is being farmed, what was decided and should not be re-litigated |
-| **Characters and duplicates policy** | how many, and whether duplicate copies are deliberate loadout convenience |
+| **Characters and duplicates policy** | how many, whether duplicate copies are deliberate loadout convenience, and **whether moving gear between characters and the vault is fine** — that one decides whether a copy parked on another Guardian counts as available |
 | **Sourced findings** | grades, magnitudes and published columns from sources this server cannot reach — **always with the source and the date**, so a later session can tell a scraped fact from a baked one |
 
 **Never write the vault into it.** It goes stale the moment something drops, and

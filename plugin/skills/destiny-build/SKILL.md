@@ -291,7 +291,7 @@ armour: **take the subclass loop from a guide, take the armour from the vault.**
 
 ## Sources — route the question, don't browse
 
-Vetted 2026-08-16, extended 2026-08-18.
+Vetted 2026-08-16, extended 2026-08-18 and 2026-09-27.
 
 | Question | Go to |
 |---|---|
@@ -306,6 +306,9 @@ Vetted 2026-08-16, extended 2026-08-18.
 | **What's featured this week?** | **`d2_progress(section="week")`** for the rotation frame with its dates |
 | **How close am I to <triumph / title>?** | **`d2_records`** |
 | **Have I ever had <weapon>? / where does it come from?** | **`d2_collections`** — acquired state *and* the source string |
+| Which raid encounter drops it? Is it craftable, attuneable, in the Classic Collector pool? | `d2_reference("raids" \| "dungeons" \| "craftable" \| "portal" \| "legacy", "<name>")`: the Legendary Loot Sources sheet. `d2_collections` names the activity, not the encounter |
+| What can drop from <raid / dungeon / destination>? | `d2_reference("raids" \| "dungeons" \| "destinations", "<activity>")`. Each row leads with its activity, so the activity name returns every drop. The sheet ranks nothing: take the tier lists for which drops are worth chasing |
+| Can <vendor> ever sell <weapon>? | `d2_reference("vendors", "<name>")` for the full pool; `d2_vendors` only knows this week's stock |
 | **How far along is this catalyst?** | **`d2_item(name=…, objectives=true)`** |
 | **What does <vendor> have?** | **`d2_vendors`** (`d2_xur` for Xûr) |
 | **How many clears do I have of <activity>?** | **`d2_history(clears=true, activity=…)`** |

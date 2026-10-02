@@ -48,15 +48,15 @@ that is how this file talks *about* them, not how you talk *to* them.
 | **`d2_context`** | **this Guardian's own notes** — roll priority, play style, modes, standing decisions, sourced findings. **Read it first, before scoring anything** |
 | **`d2_synergy`** | **what provides or consumes a game verb**, compiled from the Data Compendium: "what cloaks an ally on Void Hunter", "what consumes scorch", every edge of one exotic with the row it was read from. `seed=` prunes: which subclasses can close a given exotic's loop at all. `activity=` returns the activity profile instead — incoming damage elements as **named** chest resist mods, champion types, encounter shape. On an **aspect**, an id query also carries **`fragment_slots`** — how many fragment slots it opens |
 | **`d2_build_check`** | **a whole build, scored as a SCORECARD and never a single number.** Loop closure, survivability with uptime categories, ability economy against the 70 pivot, champion coverage, damage stack, mode-aware dead weight. Plus **`artifact_check`** against the live account: is the stated artifact the one equipped, is each named perk even a perk of it, is it slotted. And **`fragment_budget`**: the two aspects decide how many fragments the build may actually run — see *The fragment budget* below |
-| `d2_profile` | characters, power, and **check `source` for freshness**. Also **`currencies`** — glimmer *and* the upgrade materials (cores, prisms, ascendant shards and alloys), so a masterwork or enhance recommendation quotes the cost **and** the balance instead of spending blind |
+| `d2_profile` | characters, power, and **check `source` for freshness**. Also **`currencies`** — glimmer *and* the upgrade materials (cores, prisms, ascendant shards and alloys), so a masterwork or enhance recommendation quotes the cost **and** the balance instead of spending blind. And each character's **six live `stats`** — the game's own total, what a build is verified against after a write (calibration 24) |
 | **`d2_progress`** | **"what should I farm this week", and the artifact.** A bare call is a **summary** — the artifact, the *outstanding* milestones, this week's modifiers, the currencies — and it names what it left out under `sections_omitted`, so ask for `section="ranks"` / `"milestones"` / `"week"` / `"artifact"` rather than assuming a missing section is empty. `section="rotation"` is **this week's activity modifiers per difficulty tier** — surges, threats, overcharged weapons, champion and shield types, banes. Also the **seasonal artifact**: **which one is equipped** and what is *slotted* in its eight sockets. See *This week's modifiers* below |
 | **`d2_records`** | **triumphs and seals by name**, with live objective progress in Bungie's own wording. "How close am I to solo flawless" is one call. `seal="…"` for title progress |
 | **`d2_collections`** | **"have I ever had this?"** Acquired or not, plus the source string. `names=[…]` is a bulk mode — though `d2_triage` now joins this itself on its discard half, so reach for it for the question asked outside a sweep. Read the caveat in *Vault triage* before letting an "acquired" become a dismantle |
 | **`d2_vendors`** | **any vendor's stock by name** — Banshee-44, Ada-1, Rahool, Saint-14. Costs, rarity, and for armour the archetype decode. `d2_xur` stays the better call for Xûr |
 | **`d2_history`** | **this Guardian's own runs**, and lifetime clears per activity ("how many Warlord's Ruin clears?"). **Not `d2_meta`**, which is the population |
-| `d2_inventory` | filter by kind / equippable / slot / **min_tier** / archetype / element / ammo. **Pages — read `truncated`, never `count`** (calibration 15) |
+| `d2_inventory` | filter by kind / equippable / slot / **min_tier** / archetype / element / ammo, and **`perk=`** (selected or selectable now, with `perk_match`). `fields="compact"` keeps rows small. **Pages — read `truncated`, never `count`** (calibration 15) |
 | **`d2_optimize`** | **best armour sets from the live vault.** Priorities, hard stat targets, a locked exotic, and the stat mods needed to round the totals out. Also **set-bonus aware** — `set_aware` is **on by default**, so every answer names the active 2pc/4pc with its magnitude and Aegis rank; `require_set` when the bonus is the point — and it now models the three things it used to only warn about: `fragments` stat costs, `tuning`, `assume_masterwork`. Use this instead of pulling the vault down and solving it here (calibrations 16, 17 and 18) |
-| `d2_sockets` | what is in an item's sockets and what else could be — armour mods, and a subclass's super, abilities, aspects, fragments |
+| `d2_sockets` | what is in an item's sockets and what else could be — armour mods, and a subclass's super, abilities, aspects, fragments. Each socket says `enabled`; a disabled one can take nothing |
 | `d2_item` | every owned copy of a named item - copies differ wildly. `objectives=true` adds **catalyst progress** per copy, plus crafting levels and quest steps |
 | **`d2_triage`** | **per-copy vault verdict CANDIDATES with reasons** — keep / ambiguous / discard-candidate, scored on what each column can *reach* against a DIM wishlist (weapons) or Pareto relevance within slot × archetype × set (armour). Reports lock state; changes nothing. **Terse by default** (verdict + one line); `detail=true` for the full reasons, aimed at the copies that matter. **Joins Collections onto the discard half automatically** — `reacquirable_from_collections` per row, `collections=false` to skip |
 | `d2_xur` | current stock with archetypes decoded |
@@ -73,9 +73,9 @@ second call with `confirm=true`. Seven ops:
 | op | what it writes |
 |---|---|
 | `equip` | `{"op":"equip","instance_id":...}` — transfers first if the piece is in the vault or on another character, in **two hops via the vault** for the second case, and moves something out of a full destination bucket first. See *Transfers* below |
-| `plug` | `{"op":"plug","instance_id":...,"column":"Trait 1","plug":"Repulsor Brace"}` — a weapon perk already unlocked in its column |
-| `mod` | `{"op":"mod","instance_id":...,"mods":["Melee Font","Heavy Handed","Void Loader"]}` — armour mods, each claiming its own socket, with energy cost reported and over-capacity warned. Reaches the **tuning** socket too, so `d2_optimize`'s `apply_tuning` goes straight in |
-| `loadout` | `{"op":"loadout","character_id":...,"subclass":"Prismatic","super":...,"grenade":...,"melee":...,"class_ability":...,"movement":...,"aspects":[...],"fragments":[...]}` — the whole subclass in one action. Every field optional; only what is named changes |
+| `plug` | `{"op":"plug","instance_id":...,"column":"Trait 1","plug":"Repulsor Brace"}` — a weapon perk already unlocked in its column. Also any one socket on armour or a subclass, and **`"socket_index":N`** names the socket outright (read the index off `d2_sockets`; a disabled socket is refused) |
+| `mod` | `{"op":"mod","instance_id":...,"mods":["Melee Font","Heavy Handed","Void Loader"]}` — armour mods, each claiming its own socket, with energy cost reported and over-capacity warned. Reaches the **tuning** socket too, so `d2_optimize`'s `apply_tuning` goes straight in — and each tuning step says its `cost`: filling an empty socket is free, changing an existing tuning costs materials (calibration 18) |
+| `loadout` | `{"op":"loadout","character_id":...,"subclass":"Prismatic","super":...,"grenade":...,"melee":...,"class_ability":...,"movement":...,"aspects":[...],"fragments":[...]}` — the whole subclass in one action. Every field optional; only what is named changes. **`fragments` is the whole desired set** — see *Setting fragments* below. Prismatic's single transcendent grenade is `transcendent_grenade`, separate from `grenade` |
 | `save_loadout` | `{"op":"save_loadout","character_id":...,"name":"Dungeon","icon":4,"title":"Duo invis"}` — snapshots **what is equipped** into one of the game's own loadout slots. Always planned last, because that is what it captures. `loadout_index` is **optional**: omitted, it takes the lowest empty slot. See *Saving to a loadout slot* below |
 | `lock` | `{"op":"lock","items":[{"instance_id":...,"state":true},...]}` (or `"op":"unlock"`) — the lock flag, batched. Locked gear cannot be dismantled. Reversible both ways, destroys nothing, transfers nothing |
 | `pull_postmaster` | `{"op":"pull_postmaster","character_id":...,"items":["Exotic Engram"]}` — gets gear out of the **Lost Items** bucket. **A bare call is a listing**, so `{"op":"pull_postmaster"}` shows every character's bucket and pulls nothing. Select with `instance_ids`, `items` by name, or `all: true` on one named character. Each character has its own postmaster |
@@ -190,11 +190,45 @@ in — so an empty option list means the server could not see the data, which is
 different answer from "not unlocked". Guessing between those two is how a
 correct build gets talked out of existence.
 
-**Aspects before fragments, and the tool already knows.** How many fragment
-slots exist depends on which aspects are equipped, so a `loadout` action orders
-its own writes. What this means for you: if a fragment is refused while aspects
-are still pending in the same plan, apply the plan and dry-run the rest again —
-do not conclude the fragment is unowned.
+**Prismatic files its abilities under borrowed types**, `Strand Grenade |
+Darkness Ability`, `Void Melee | Light Ability`, `Movement Ability`, and its one
+transcendent grenade is a socket of its own with a single option. A deployment
+that predates reading those types files them under `other` and then refuses a
+perfectly owned grenade or melee as "not selectable", or says the subclass has
+"no melee socket". **Neither is an ownership verdict.** Read `d2_sockets`; if the
+ability is among the options of some socket, write it with `{"op":"plug",
+"instance_id":<subclass>,"socket_index":N,"plug":...}` (or a plain name `plug` on
+a deployment without `socket_index`) and carry on.
+
+### Setting fragments
+
+**The fragment list in a `loadout` action is the WHOLE set you want**, and it can
+only land in sockets the equipped aspects have opened. A subclass shows all its
+fragment sockets whatever is equipped; the unopened ones come back `enabled:
+false` holding `Empty Fragment Socket`, the first "empty" socket a careless
+search finds, and Bungie refuses every write to one. So, before a fragment write:
+
+1. **Count the slots from the aspects.** `d2_synergy(id=...)` per equipped
+   aspect for `fragment_slots`, **by id**: the Prismatic copy of an aspect is a
+   different entry from the base subclass's and differs on five of the fifteen
+   (Ascension is 3 on Arc and 2 on Prismatic). Sum the two.
+2. **Confirm it against the game.** `d2_sockets(target="subclass",
+   category="fragment")`: the number of sockets with `enabled: true` is the
+   capacity. Where it disagrees with the sum, the game wins; say so. **Ignore
+   `empty_fragment` in `selected`** on any deployment that still reports it: it
+   has counted a disabled socket as a free one. A current deployment calls that
+   socket `disabled_fragment`.
+3. **Name no more fragments than that.** The server refuses an overfull list
+   with both numbers, and keeps fragments already in an open socket, so list the
+   ones to keep as well as the new ones.
+4. **Aspects first.** In one `loadout` action the server writes them before the
+   fragments and sizes the fragment budget from the NEW pair. If it cannot vouch
+   for the new pair it says so: apply the aspects, then dry-run the fragments
+   again. A fragment refused while aspects are pending is not unowned.
+5. **If d2_apply still cannot place them**, the manual list says exactly what to
+   swap: *"in the fragment row, replace Facet of Protection with Facet of Dawn
+   and Facet of Balance with Facet of Sacrifice"* — never "set these fragments".
+   Fragments the list did not name are reported as left in place, not cleared.
 
 **Four things it cannot do**, all worth saying rather than silently omitting:
 **artifact perks have no write endpoint anywhere** (slotted in game), which
@@ -314,6 +348,8 @@ Vetted 2026-08-16, extended 2026-08-18 and 2026-09-27.
 | **How many clears do I have of <activity>?** | **`d2_history(clears=true, activity=…)`** |
 | **Can I afford to masterwork / enhance this?** | **`d2_profile`** → `currencies` |
 | What are the STEPS of this quest? | still the web — the tools carry progress, not walkthroughs |
+| **Which of my weapons can have <perk>?** | **`d2_inventory(kind="weapon", perk="<name>", fields="compact")`** — matches the selected perk and the options selectable now, and `perk_match` says which. Never dump the vault with perks to search it |
+| **What is in this dim.gg link?** | DIM via the browser, then the URL's JSON and `d2_resolve` — calibration 25 |
 
 **Read an aspect's full text, never its name.** Trapper's Ambush "makes allies
 invisible" — only *while Vanishing Step is also equipped*. That conditional cost
@@ -477,8 +513,11 @@ fine in a browser.
    it, `null` where the bounded search found nothing and *nothing was proven*.
    Never report `null` as impossible; say the search did not find one and offer
    to loosen a target. **`approximate`** true means a search bound bit, named in
-   a note. **Totals are base gear only** — no mods, fragments or tuning, so a 90
-   with a free mod slot is usually a 100 once `d2_apply` fits the mods. And
+   a note. **`stats` is the pieces before the allocator spends anything**: live
+   stats with the fitted stat mods taken out and the current tuning left in, so
+   a 90 with a free mod slot is usually a 100 once `d2_apply` fits the mods. The
+   number to verify against the game is **`stats_after_apply`** (calibration 24).
+   And
    `lock` the exotic the player has already chosen: the free-slot answer and the
    locked answer are different sets, and only the second one is any use to them.
    *(For contrast, DIM's optimizer silently clamps an impossible minimum instead
@@ -506,11 +545,13 @@ fine in a browser.
    asks for, and a bigger request comes back capped in `notes`. When a target
    needs more than that, the honest answer is `meets_targets: false` with an
    `unreachable` ceiling — better gear in one slot, not more mods. Two more
-   contributors are *not* in any total and are worth naming when a set lands just
-   short: **tuning** (±5 traded between two stats, in its own socket on every
-   piece) and **masterworking** (~+30 across a set, spread rather than aimed, so
-   it does not rescue a stat that is short because of archetype scarcity — see
-   calibration 2).
+   levers are worth naming when a set lands just short: **tuning** (±5 traded
+   between two stats, in its own socket on every piece — already in the totals
+   for what is socketed now, modelled for changes only with `tuning=true`) and
+   **masterworking** (~+30 across a set, spread rather than aimed, so it does not
+   rescue a stat that is short because of archetype scarcity — see
+   calibration 2). Stat mods already fitted are reused: a piece holding the mod
+   the set needs comes back `already there`, and only the rest are writes.
 
    The Data Compendium's `armor-mods` tab documents the Fonts and their
    magnitudes; it does **not** document the flat stat mods, so read those off the
@@ -525,7 +566,18 @@ fine in a browser.
    step 5 before quoting a stat line. **Tuning** (`tuning=true`) trades ±5 in its
    own socket on every piece, costs no energy, and is off by default because it is
    the only lever that can *lower* a stat; it closes the gap the five flat mods
-   cannot, and it takes the 5 from a stat with no floor. **Masterworking**
+   cannot, and it takes the 5 from a stat with no floor. **An owned piece's
+   `stats` already include its socketed tuning** (a `+Super / -Health` piece
+   shows Super +5 and Health -5), so tuning is never free arithmetic on top of
+   the totals: a new trade replaces the one on that piece. And the game prices
+   the two moves differently — **filling an empty tuning socket is free,
+   changing an existing one costs materials**, and Bungie refuses the swap with
+   `DestinyCannotAffordMaterialRequirements` when the balance is short. Each
+   trade comes back `free (empty socket)` or `swap, costs materials`; trades
+   already socketed are listed under `tuning_in_place` as `already there`. Prefer
+   a stat mod or an empty socket to a swap, and quote the swap's cost against
+   `d2_profile` → `currencies` before recommending it (the price itself is not
+   published, so say that too). **Masterworking**
    (`assume_masterwork=true`) is ~+30 **spread** and is added to no total, ever —
    it cannot be pointed at the stat that is short, so it does not rescue a stat
    that is short because of archetype scarcity (calibration 2). Read
@@ -601,6 +653,36 @@ fine in a browser.
    and duplicates policy*, not a default.** Some Guardians keep deliberate
    loadouts parked per character. If the file does not say, ask once and offer
    to record it.
+
+24. **After any apply, verify the stats against the stated targets, from the
+   game.** `d2_profile` carries each character's six live stats — the game's own
+   total of armour, mods, tuning and fragments. Read it once the write has had
+   ~75 s to land (calibration 14), compare it with the targets the build was
+   chosen for, and **report the shortfall** stat by stat. Do not quote the
+   optimiser's number as the result: it is a model, and it was once 25 Weapons
+   too high because it counted fitted mods and socketed tuning twice. Where the
+   two disagree, the game is right and the difference is the finding. The
+   optimiser's own prediction to compare against is `stats_after_apply`, which
+   includes fitted mods the plan leaves in place; fragments count there only if
+   they were passed. *If `d2_profile` has no `stats` on this deployment, say so
+   and ask them to read the six numbers off the character screen.*
+
+25. **A dim.gg link is a stub; the build is in DIM's URL.** The share page
+   itself carries nothing readable. Open the link in DIM through a browser
+   session, let it redirect, and read the **URL**: it carries the loadout as
+   JSON — item **hashes**, `socketOverrides` keyed by **socket index** (subclass
+   abilities, aspects and fragments), and `parameters.mods` (armour mod hashes,
+   plus stat constraints). Resolve every hash with `d2_resolve` before naming
+   anything. **These links carry no weapons**; ask for them or take them from
+   the guide. Then build it from the vault as usual — the link names the pieces
+   its author owned, not the copies this Guardian has.
+
+26. **Guide transcripts mangle names, so check Collections before saying
+   something is not owned.** Auto-captions turn names into near-words: "Mint"
+   is Mint Retrograde, "Vog" is most likely Vault of Glass. Resolve the likely
+   name first (`d2_synergy` / `d2_reference` / `d2_collections(name=...)`),
+   and treat "I cannot find that" as a lookup miss until Collections says the
+   item is not acquired.
 
 ## This Guardian's preferences are NOT in here — they are in `d2_context`
 
@@ -693,7 +775,7 @@ a build ends up with last week's mods under this week's subclass.
 | 7 | **Set bonus + stats** | `d2_optimize` — set-aware by default, `require_set` when the bonus is the point — `lock` the exotic, `fragments=[...]` from step 5, and **70-pivot floors as `targets`** rather than reflex 100s |
 | 8 | **Mods** | orb-and-charge economy templates; surge over font for damage; **chest resists named from the activity profile's element mix**, not from habit — and cross-checked against **this week's threat element** from step 1 |
 | 9 | **Verify** | `d2_build_check` per candidate, then `d2_meta` as an **outside view** — never as the decider (popularity is not correctness: Exodus Down ranks #2/S at 4% population). **The artifact column and the fragment budget are both checked for you** — `d2_build_check` compares the stated artifact against the equipped one and each stated perk against the slotted set, and totals the aspects' fragment slots against the fragments named — so read `artifact_check` and `fragment_budget` rather than trusting the spec, and quote any material cost against `d2_profile` → `currencies` |
-| 10 | **Deliver** | 1–2 candidates with their trade-offs → the Guardian picks → `d2_apply` equip + `mod`/`apply_tuning` + `loadout` + **`save_loadout`** with a `title` and a slot they chose off the overview → report the slot, name and title back → then the manual checklist: **artifact column** (naming which perks are not slotted, and the artifact to equip if it is the wrong one — never "unlock", they all are), **masterworking, infusion, kill tracker** (both sections below) |
+| 10 | **Deliver** | 1–2 candidates with their trade-offs → the Guardian picks → `d2_apply` equip + `mod`/`apply_tuning` + `loadout` + **`save_loadout`** with a `title` and a slot they chose off the overview → report the slot, name and title back → **verify the six stats against the targets from `d2_profile` and report any shortfall** (calibration 24) → then the manual checklist: **artifact column** (naming which perks are not slotted, and the artifact to equip if it is the wrong one — never "unlock", they all are), **masterworking, infusion, kill tracker** (both sections below) |
 
 ### Scenario-specific weapons: spell the perks out, and set the tracker
 

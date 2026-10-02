@@ -487,7 +487,9 @@ fine in a browser.
 14. **`d2_apply` works, and a confirmed write is not immediately readable.**
    Live-tested 2026-08-18 (equip Mistral Lift, revert to Taipan). `result: ok`
    means Bungie *accepted* the write; the profile endpoint served the **old
-   state for ~75 seconds** afterwards, with fresh fetches throughout. Reading
+   state for ~75 seconds** afterwards, with fresh fetches throughout — and
+   on 2026-10-02 a batch of subclass writes took **between 2¾ and 5 minutes**
+   to appear, so treat ~75 s as the floor, not the bound. Reading
    back straight away shows the previous value and means nothing — it looks
    like a silent failure and invites a pointless second write. **If the player
    is at the game, do not poll on their behalf** — just say it can take a
@@ -657,7 +659,8 @@ fine in a browser.
 24. **After any apply, verify the stats against the stated targets, from the
    game.** `d2_profile` carries each character's six live stats — the game's own
    total of armour, mods, tuning and fragments. Read it once the write has had
-   ~75 s to land (calibration 14), compare it with the targets the build was
+   time to land — 75 s at least, up to ~5 min (calibration 14) — compare it
+   with the targets the build was
    chosen for, and **report the shortfall** stat by stat. Do not quote the
    optimiser's number as the result: it is a model, and it was once 25 Weapons
    too high because it counted fitted mods and socketed tuning twice. Where the

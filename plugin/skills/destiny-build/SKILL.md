@@ -687,6 +687,17 @@ fine in a browser.
    and treat "I cannot find that" as a lookup miss until Collections says the
    item is not acquired.
 
+27. **A damage perk is worth what its category leaves it.** Before counting a
+   buff toward a DPS build, sort it: global debuff, empowering buff and weapon
+   surge each count only their highest member, and everything else multiplies.
+   The checklist a build reads well against and still fails: no stat above 100,
+   an artifact that does not serve the subclass, a second source in an exclusive
+   category, Heavy Handed left on through the damage phase where a Font would
+   pay. And when a creator's narration and the published sheet disagree on a
+   number, the sheet wins — one walkthrough called Tractor Cannon "10%" and
+   filed Radiant under amplification in the same video. See *Damage stacking*
+   under *Composing a build*.
+
 ## This Guardian's preferences are NOT in here — they are in `d2_context`
 
 **Deliberate split (2026-08-18).** This file holds what is true for *any*
@@ -776,9 +787,69 @@ a build ends up with last week's mods under this week's subclass.
 | 5 | **Fragments + artifact** | **the two aspects from step 4 set the fragment budget, so establish it first** — `d2_synergy(id=...)` per aspect gives `fragment_slots`, and `d2_build_check` totals it in `fragment_budget`. Then greedy select-then-improve over the graph, *within* that budget; allow **back-propagation** — an artifact perk can justify changing a weapon element chosen earlier. Fragments carry stat costs; carry them into step 7. If the budget comes back unverifiable, ask them to read the enabled fragment sockets in game rather than picking a number |
 | 6 | **Weapons** | inverse-gap fill: whatever the seed is best at, the weapons cover the opposite. Prefer weapons that *feed abilities*. Wishlist-grade them, then **pin the copy by `instance_id`** via `d2_item` — copies differ, and the copy trap is real. **Where the copy currently sits is not a filter.** A copy on another character or in a full bucket is still the copy: `d2_apply` moves it, in two hops if it has to, and makes room if the bucket is full. Excluding it and recommending a weaker roll is a wrong answer that reads like a careful one — check their moving policy in `d2_context`, not your own instinct |
 | 7 | **Set bonus + stats** | `d2_optimize` — set-aware by default, `require_set` when the bonus is the point — `lock` the exotic, `fragments=[...]` from step 5, and **70-pivot floors as `targets`** rather than reflex 100s |
-| 8 | **Mods** | orb-and-charge economy templates; surge over font for damage; **chest resists named from the activity profile's element mix**, not from habit — and cross-checked against **this week's threat element** from step 1 |
+| 8 | **Mods** | orb-and-charge economy templates; surge over font for damage; **for a damage phase, fill the stacking categories below — one debuff, one empowering buff, one surge, then everything that stacks**; **chest resists named from the activity profile's element mix**, not from habit — and cross-checked against **this week's threat element** from step 1 |
 | 9 | **Verify** | `d2_build_check` per candidate, then `d2_meta` as an **outside view** — never as the decider (popularity is not correctness: Exodus Down ranks #2/S at 4% population). **The artifact column and the fragment budget are both checked for you** — `d2_build_check` compares the stated artifact against the equipped one and each stated perk against the slotted set, and totals the aspects' fragment slots against the fragments named — so read `artifact_check` and `fragment_budget` rather than trusting the spec, and quote any material cost against `d2_profile` → `currencies` |
 | 10 | **Deliver** | 1–2 candidates with their trade-offs → the Guardian picks → `d2_apply` equip + `mod`/`apply_tuning` + `loadout` + **`save_loadout`** with a `title` and a slot they chose off the overview → report the slot, name and title back → **verify the six stats against the targets from `d2_profile` and report any shortfall** (calibration 24) → then the manual checklist: **artifact column** (naming which perks are not slotted, and the artifact to equip if it is the wrong one — never "unlock", they all are), **masterworking, infusion, kill tracker** (both sections below) |
+
+### Damage stacking: one per exclusive category, then everything that stacks
+
+**Damage modifiers multiply across categories, and three of the seven categories
+only ever count their highest member.** A second source in one of those three is
+a wasted slot that reads like a damage perk. Source: Court's *Stacking Damage
+Buffs Guide* (data 2026-06-09, checked for 9.7.0.3 — the final sandbox), cross-read
+against Chablo 91's 2026-10-03 walkthrough of it.
+
+| Category | Inside the category | Magnitudes worth knowing |
+|---|---|---|
+| **Global debuff** (on the enemy) | **highest only** | Deadfall Tether 35% · Moebius Tether, Tractor Cannon, Fafnir, Felwinter's Helm 30% · every standard Weaken and Divinity 15% |
+| **Empowering buff** (on the Guardian) | **highest only** | Lumina, Gyrfalcon's finisher, Sealed Ahamkara Grasps, Wormgod x5 35% (No Backup Plans: shotguns; Hazardous Propulsion: rockets and GLs) · Well, Weapons of Light, Banner Shield 25% · Radiant, Empowering Rift 20% |
+| **Weapon surge** (Armor Charge) | **highest per element** | 1x 10% · 2x 17% · 3x 22% from leg mods · 4x 25% from an exotic only (Eternal Warrior, Doom Fang, Foetracer, Mantle of Battle Harmony, Sanguine Alchemy, Blight Ranger, Ballidorse) |
+| **Amplification** | stacks | Weapons stat, aspects and fragments (Roaring Flames, Banner of War, Facet of Courage…), most artifact damage perks, raid mods, Mask of Bakris 10/21/33% |
+| **Exotic intrinsic** | stacks | the exotic's own damage perk — unless that perk *is* a surge or an empowering buff, in which case it competes there |
+| **Weapon perk** | stacks, with each other too | Vorpal, Bait and Switch, One-Two Punch, origin traits |
+| **World and activity** | stacks | activity surge 25%, overcharge 25% — **those two do not stack with each other**; an activity surge does stack with an armor surge |
+
+**What follows from it when composing for a boss:**
+
+* **Name the source in each exclusive category before choosing anything else.**
+  Radiant inside a Well is dead (25 beats 20). Leg surge mods under a 4x-surge
+  exotic of the same element are dead sockets. Two debuffs is one debuff.
+* **Solo, the build brings its own debuff.** In a fireteam the three exclusive
+  categories are shared, so split them between players instead of doubling up.
+* **If the debuff is already the highest there is (Tether), spend the artifact on
+  amplification** — that is why Tether pairs with Solo Operative and not with
+  another Weaken source.
+* **A 15% Weaken re-applied before a 30% debuff expires extends the 30%** — for
+  Tractor Cannon, Fafnir and Felwinter's only. Tether cannot be extended and
+  overrides everything; Divinity cannot be extended.
+* **The Weapons stat buys boss damage only above 100**: +0.15% per point for
+  primary and special, +0.1% for heavy, so 15% / 10% at 200. From 0 to 100 it
+  affects rank-and-file and elites only. A build parked at Weapons 100 has bought
+  no boss damage; the Kinetic intrinsic bonus does not apply to bosses either.
+* **A surge needs the charge economy that keeps it alive.** Base is 10s per
+  charge at 3 charges; `Charged Up` raises the cap to 4/5/6 and `Time Dilation`
+  stretches each charge to 15/18/20s. Mechanics before the damage phase eat
+  that timer, so a solo DPS build wants one or two Time Dilations.
+* **Artifact perks are not one category.** Limit Break, Solo Operative,
+  Thunderous Retort and Elemental Overdrive (22%, labelled a surge in the UI and
+  not one) are amplification and stack. Radiant Orbs is an empowering buff and
+  Precision Equity is a surge, so each is overridden like any other source.
+  Torch does nothing against a boss.
+* **Melee-increasing modifiers are additive with each other**, per the sheet.
+  Do not multiply a stack of melee buffs and quote the product.
+
+**Two loadouts, when the Guardian is willing to swap.** Armor Charges persist
+across a loadout swap and a surge or font reads the mods equipped at that moment.
+So the *run* loadout carries the charge builders (Hands-On, Heavy Handed, Stacks
+on Stacks, a scavenger, one surge) and the *DPS* loadout carries three surges and
+the fonts, swapped in at the damage phase. Offer it as two `save_loadout` slots.
+It is a preference, not a default: ask before building a rotation around a menu
+swap.
+
+**`d2_build_check` does not know these categories yet.** Its `damage_stack`
+section lists sources flat, the surge mods are not in the graph, and the Weapons
+stat above 100 is not scored. Until a deployment says otherwise, sort its damage
+edges into the table above by hand and say that is what you did.
 
 ### Scenario-specific weapons: spell the perks out, and set the tracker
 

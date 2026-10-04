@@ -846,10 +846,17 @@ the fonts, swapped in at the damage phase. Offer it as two `save_loadout` slots.
 It is a preference, not a default: ask before building a rotation around a menu
 swap.
 
-**`d2_build_check` does not know these categories yet.** Its `damage_stack`
-section lists sources flat, the surge mods are not in the graph, and the Weapons
-stat above 100 is not scored. Until a deployment says otherwise, sort its damage
-edges into the table above by hand and say that is what you did.
+**`d2_build_check` sorts the stack for you — read `damage_stack.by_category`.**
+Each exclusive category names its `winner` and lists the `overridden` sources
+with the reason; `empty_exclusive_categories` is the cheapest damage still on the
+table, and it is mode-aware (solo must supply its own). Leg surges are counted
+from the `mods` list by their in-game names (`Kinetic Weapon Surge` x3), and
+`stats.Weapons` is scored as boss damage only above 100. Three things to read
+honestly: `exotic-intrinsic` can be **empty by omission** — many exotics carry no
+damage edge in the graph yet, and the section says so by name; an `unranked`
+source has no stated magnitude and was never declared a loser; and there is no
+combined multiplier, on purpose. *If `by_category` is absent, the deployment
+predates it: sort the edges into the table above by hand and say so.*
 
 ### Scenario-specific weapons: spell the perks out, and set the tracker
 
